@@ -1,48 +1,33 @@
 /**
  * API Route: /api/import
- * POST — Import data from Excel file (clears existing data first)
- * GET  — Check file status or auto-sync if check=true
+ * ======================
+ * Legacy endpoint — sekarang mengarah ke Google Sheets sync.
+ * POST — Trigger sinkronisasi data dari Google Sheets
+ * GET  — Mendapatkan info sync terakhir
  */
 import { NextResponse } from "next/server";
-import { importExcelPerjadin, getDefaultExcelPath, getLastSyncInfo, checkAndAutoSync } from "@/lib/excel-importer";
+import { importFromGoogleSheets, getSheetsSyncInfo } from "@/lib/sheets-importer";
 
-export async function POST(request) {
+export async function POST() {
   try {
-    let filePath;
-    const body = await request.json().catch(() => ({}));
-    
-    if (body.filePath) {
-      filePath = body.filePath;
-    } else {
-      filePath = getDefaultExcelPath();
-    }
-
-    if (!filePath) {
-      return NextResponse.json({ error: "File Excel tidak ditemukan" }, { status: 404 });
-    }
-
-    const result = importExcelPerjadin(filePath);
+    const result = await importFromGoogleSheets();
     return NextResponse.json({
       success: true,
-      message: `Berhasil memuat ${result.totalImported} data dari ${result.sheets.length} sheet`,
+      message: `Berhasil memuat ${result.totalImported} data dari ${result.sheets.length} sheet (Google Sheets)`,
       ...result,
     });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const status = err.message.includes("quota") ? 429 : 500;
+    return NextResponse.json(
+      { success: false, error: err.message },
+      { status }
+    );
   }
 }
 
-export async function GET(request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const check = searchParams.get("check");
-
-    if (check === "true") {
-      const syncResult = checkAndAutoSync();
-      return NextResponse.json(syncResult);
-    }
-
-    const info = getLastSyncInfo();
+    const info = getSheetsSyncInfo();
     return NextResponse.json(info);
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
