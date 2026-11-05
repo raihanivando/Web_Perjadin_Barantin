@@ -7,6 +7,9 @@ import { NextResponse } from "next/server";
 import { getAllRecords, insertRecord, getSummaryStats, getAvailableCategories, getSuratTugasList, getPersonnelMonitoringList } from "@/lib/database";
 import { validasiLengkap } from "@/lib/ai-checker";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
@@ -14,16 +17,24 @@ export async function GET(request) {
 
   try {
     if (action === "stats") {
-      return NextResponse.json(getSummaryStats(kategori));
+      return NextResponse.json(getSummaryStats(kategori), {
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      });
     }
     if (action === "categories") {
-      return NextResponse.json(getAvailableCategories());
+      return NextResponse.json(getAvailableCategories(), {
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      });
     }
     if (action === "surat-tugas") {
-      return NextResponse.json(getSuratTugasList(kategori));
+      return NextResponse.json(getSuratTugasList(kategori), {
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      });
     }
     if (action === "personnel" || action === "monitoring-personel") {
-      return NextResponse.json(getPersonnelMonitoringList(kategori));
+      return NextResponse.json(getPersonnelMonitoringList(kategori), {
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      });
     }
 
     const filterStatus = searchParams.get("status") || null;
@@ -31,7 +42,9 @@ export async function GET(request) {
     const suratTugas = searchParams.get("suratTugas") || null;
     const sort = searchParams.get("sort") || null;
     const records = getAllRecords({ kategori, filterStatus, search, suratTugas, sort });
-    return NextResponse.json(records);
+    return NextResponse.json(records, {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

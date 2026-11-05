@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ["better-sqlite3"],
-  cacheComponents: true,
-  partialPrefetching: true,
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./perjadin.db"],
+  },
 };
 
 export default nextConfig;

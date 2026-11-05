@@ -126,7 +126,7 @@ export default function Home() {
     setSyncing(true);
     addToast("Sedang menyinkronkan data dari Google Sheets...", "info");
     try {
-      const res = await fetch("/api/sync-sheets", { method: "POST" });
+      const res = await fetch("/api/sync-sheets", { method: "POST", cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         addToast(`✅ ${data.message}`, "success");
@@ -146,16 +146,16 @@ export default function Home() {
     setLoading(true);
     try {
       const [catRes, statsRes] = await Promise.all([
-        fetch("/api/records?action=categories").then((r) => r.json()),
-        fetch(`/api/records?action=stats&kategori=${encodeURIComponent(kategori)}`).then((r) => r.json()),
+        fetch("/api/records?action=categories", { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/records?action=stats&kategori=${encodeURIComponent(kategori)}`, { cache: "no-store" }).then((r) => r.json()),
       ]);
       setCategories(catRes);
       setStats(statsRes);
 
       if (activePage === "klasifikasi" || activePage === "dashboard" || activePage === "monitoring") {
         const [stRes, pRes] = await Promise.all([
-          fetch(`/api/records?action=surat-tugas&kategori=${encodeURIComponent(kategori)}`).then((r) => r.json()),
-          fetch(`/api/records?action=personnel&kategori=${encodeURIComponent(kategori)}`).then((r) => r.json()),
+          fetch(`/api/records?action=surat-tugas&kategori=${encodeURIComponent(kategori)}`, { cache: "no-store" }).then((r) => r.json()),
+          fetch(`/api/records?action=personnel&kategori=${encodeURIComponent(kategori)}`, { cache: "no-store" }).then((r) => r.json()),
         ]);
         setSuratGroups(stRes || []);
         setPersonnelList(pRes || []);
@@ -170,7 +170,7 @@ export default function Home() {
         if (searchQuery) params.set("search", searchQuery);
         if (stFilter !== "SEMUA") params.set("suratTugas", stFilter);
         if (sortBy) params.set("sort", sortBy);
-        const recRes = await fetch(`/api/records?${params}`).then((r) => r.json());
+        const recRes = await fetch(`/api/records?${params}`, { cache: "no-store" }).then((r) => r.json());
         setRecords(recRes);
       }
     } catch (err) {
