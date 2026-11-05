@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+*.db
 *.db-wal
 *.db-shm
 *.xlsx
