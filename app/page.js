@@ -121,12 +121,12 @@ export default function Home() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500);
   }, []);
 
-  // Sync Excel helper
-  const handleSyncExcel = async () => {
+  // Sync Google Sheets helper
+  const handleSyncSheets = async () => {
     setSyncing(true);
-    addToast("Sedang membaca & menyinkronkan data dari file Excel...", "info");
+    addToast("Sedang menyinkronkan data dari Google Sheets...", "info");
     try {
-      const res = await fetch("/api/import", { method: "POST" });
+      const res = await fetch("/api/sync-sheets", { method: "POST" });
       const data = await res.json();
       if (data.success) {
         addToast(`✅ ${data.message}`, "success");
@@ -184,20 +184,27 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kategori, activePage, statusFilter, searchQuery, stFilter, sortBy]);
 
-  // Auto-sync watcher: checks if Excel file on disk was modified every 4 seconds
+  // Auto-sync: polling Google Sheets setiap 60 detik
   useEffect(() => {
+    // Initial sync on first load
+    fetch("/api/sync-sheets", { method: "POST" }).then(r => r.json()).then(data => {
+      if (data.success) {
+        addToast(`✅ ${data.message}`, "success");
+        fetchData();
+      }
+    }).catch(() => {});
+
     const timer = setInterval(async () => {
       try {
-        const res = await fetch("/api/import?check=true");
+        const res = await fetch("/api/sync-sheets", { method: "POST" });
         const data = await res.json();
-        if (data && data.updated) {
-          addToast(`🔔 ${data.message || "File Excel diperbarui! Data otomatis disinkronkan."}`, "info");
+        if (data.success) {
           fetchData();
         }
       } catch {
         // silent on network pause
       }
-    }, 4000);
+    }, 60000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addToast]);
@@ -466,16 +473,16 @@ export default function Home() {
                   borderRadius: "var(--radius-sm)",
                   cursor: syncing ? "not-allowed" : "pointer"
                 }}
-                onClick={handleSyncExcel}
+                onClick={handleSyncSheets}
                 disabled={syncing}
                 title="Muat ulang seluruh data langsung dari file Excel terbaru"
               >
                 <span>{syncing ? "⏳" : "🔄"}</span>
-                <span>{syncing ? "Menyelaraskan..." : "Sinkronkan Excel"}</span>
+                <span>{syncing ? "Menyinkronkan..." : "Sync Google Sheets"}</span>
               </button>
               <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.72rem", color: "var(--text-dim)" }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block", boxShadow: "0 0 8px #22c55e" }} />
-                <span>Auto-Sync Excel Aktif</span>
+                <span>Auto-Sync Google Sheets Aktif</span>
               </div>
             </div>
           </nav>
