@@ -25,6 +25,7 @@
 *.pem
 *.db-wal
 *.db-shm
+*.xlsx
 
 # debug
 npm-debug.log*
