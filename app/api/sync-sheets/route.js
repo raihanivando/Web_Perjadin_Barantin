@@ -10,9 +10,17 @@ import { importFromGoogleSheets, getSheetsSyncInfo } from "@/lib/sheets-importer
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function POST() {
+export async function POST(request) {
   try {
-    const result = await importFromGoogleSheets();
+    let force = false;
+    try {
+      const { searchParams } = new URL(request.url);
+      force = searchParams.get("force") === "true";
+    } catch {
+      // ignore
+    }
+
+    const result = await importFromGoogleSheets({ force });
     return NextResponse.json({
       success: true,
       message: `Berhasil memuat ${result.totalImported} data dari ${result.sheets.length} sheet (Google Sheets)`,

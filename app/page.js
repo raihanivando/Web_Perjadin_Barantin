@@ -126,7 +126,7 @@ export default function Home() {
     setSyncing(true);
     addToast("Sedang menyinkronkan data dari Google Sheets...", "info");
     try {
-      const res = await fetch("/api/sync-sheets", { method: "POST", cache: "no-store" });
+      const res = await fetch("/api/sync-sheets?force=true", { method: "POST", cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         addToast(`✅ ${data.message}`, "success");
@@ -184,21 +184,13 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kategori, activePage, statusFilter, searchQuery, stFilter, sortBy]);
 
-  // Auto-sync: polling Google Sheets setiap 60 detik
+  // Auto-sync: polling Google Sheets setiap 60 detik di background
   useEffect(() => {
-    // Initial sync on first load
-    fetch("/api/sync-sheets", { method: "POST" }).then(r => r.json()).then(data => {
-      if (data.success) {
-        addToast(`✅ ${data.message}`, "success");
-        fetchData();
-      }
-    }).catch(() => {});
-
     const timer = setInterval(async () => {
       try {
-        const res = await fetch("/api/sync-sheets", { method: "POST" });
+        const res = await fetch("/api/sync-sheets", { method: "POST", cache: "no-store" });
         const data = await res.json();
-        if (data.success) {
+        if (data.success && data.totalImported > 0) {
           fetchData();
         }
       } catch {
@@ -207,7 +199,7 @@ export default function Home() {
     }, 60000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addToast]);
+  }, []);
 
   // Pengelompokan baris per No Surat Tugas & SPD (dengan dukungan sorting)
   const groupedSpdList = useMemo(() => {
