@@ -446,7 +446,7 @@ export default function Home() {
                 value={kategori}
                 onChange={(e) => { setKategori(e.target.value); setSelectedGroup(null); }}
               >
-                <option value="SEMUA">🌐 SEMUA KATEGORI (4 Sheet)</option>
+                <option value="SEMUA">🌐 SEMUA KATEGORI ({categories.length ? `${categories.length} Sheet` : "Semua"})</option>
                 {categories.map((c) => <option key={c} value={c}>📁 {c}</option>)}
               </select>
             </div>
