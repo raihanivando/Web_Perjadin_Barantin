@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import {
@@ -998,135 +998,135 @@ export default function Home() {
               {klasifikasiTab === "surat" && (
                 <>
                   {suratGroups.length > 0 && (
-                <>
-                  <div className="metrics-grid">
-                    <div className="metric-card animate-in accent">
-                      <div className="metric-label">Total Kegiatan</div>
-                      <div className="metric-value">{suratGroups.length}</div>
-                      <div className="metric-sub">Rombongan penugasan</div>
-                    </div>
-                    <div className="metric-card animate-in">
-                      <div className="metric-label">Total Personel</div>
-                      <div className="metric-value">{suratGroups.reduce((a, g) => a + g.totalPelaksana, 0)}</div>
-                      <div className="metric-sub">Orang Pelaksana</div>
-                    </div>
-                    <div className="metric-card animate-in">
-                      <div className="metric-label">Rata-rata Anggota</div>
-                      <div className="metric-value">{(suratGroups.reduce((a, g) => a + g.totalPelaksana, 0) / suratGroups.length).toFixed(1)}</div>
-                      <div className="metric-sub">Personel per Surat Tugas</div>
-                    </div>
-                    <div className="metric-card animate-in">
-                      <div className="metric-label">Total Realisasi</div>
-                      <div className="metric-value currency">{fmtShort(suratGroups.reduce((a, g) => a + g.totalBiayaRombongan, 0))}</div>
-                      <div className="metric-sub">Akumulasi seluruh rombongan</div>
-                    </div>
-                  </div>
-
-                  <div className="section-title"><span className="icon">📑</span> Pilih Nomor Surat Tugas</div>
-                  <div style={{ marginBottom: 20 }}>
-                    <select
-                      className="form-select"
-                      style={{ width: "100%", maxWidth: 600 }}
-                      value={selectedGroup?.groupKey || ""}
-                      onChange={(e) => {
-                        const g = suratGroups.find((x) => x.groupKey === e.target.value);
-                        setSelectedGroup(g);
-                      }}
-                    >
-                      {suratGroups.map((g) => (
-                        <option key={g.groupKey} value={g.groupKey}>{g.displayLabel}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {selectedGroup && (
                     <>
-                      <div className="surat-card animate-in">
-                        <div className="surat-card-header">
-                          <div>
-                            <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600, letterSpacing: 0.5 }}>
-                              NOMOR SURAT TUGAS & SPD
-                            </div>
-                            <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--text-title)", marginTop: 4 }}>
-                              {selectedGroup.noSuratTugasSpd}
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                            <span className="badge" style={{
-                              background: "var(--accent-muted)", color: "var(--accent)",
-                              border: "1px solid var(--border)", padding: "6px 14px", fontSize: "0.82rem"
-                            }}>
-                              Kegiatan No. {selectedGroup.noUrut}
-                            </span>
-                            <a
-                              href={`/api/export?suratTugas=${encodeURIComponent(selectedGroup.noSuratTugasSpd)}`}
-                              className="btn btn-secondary btn-sm"
-                              style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.78rem" }}
-                              download
-                              title="Unduh seluruh pelaksana surat tugas ini ke format Excel (.xlsx)"
-                            >
-                              <span>📥</span> Ekspor Excel
-                            </a>
-                          </div>
+                      <div className="metrics-grid">
+                        <div className="metric-card animate-in accent">
+                          <div className="metric-label">Total Kegiatan</div>
+                          <div className="metric-value">{suratGroups.length}</div>
+                          <div className="metric-sub">Rombongan penugasan</div>
                         </div>
-                        <div className="surat-card-meta">
-                          <div><div className="meta-label">Kota Tujuan</div><div className="meta-value">📍 {selectedGroup.tujuan}</div></div>
-                          <div><div className="meta-label">Periode Penugasan</div><div className="meta-value">📅 {selectedGroup.tglMulai} s/d {selectedGroup.tglSelesai}</div></div>
-                          <div><div className="meta-label">Total Pelaksana</div><div className="meta-value">👥 {selectedGroup.totalPelaksana} Orang</div></div>
-                          <div><div className="meta-label">Total Biaya Rombongan</div><div className="meta-value currency">💰 Rp {fmt(selectedGroup.totalBiayaRombongan)}</div></div>
+                        <div className="metric-card animate-in">
+                          <div className="metric-label">Total Personel</div>
+                          <div className="metric-value">{suratGroups.reduce((a, g) => a + g.totalPelaksana, 0)}</div>
+                          <div className="metric-sub">Orang Pelaksana</div>
                         </div>
-                        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--border)", fontSize: "0.82rem" }}>
-                          <span style={{ color: "var(--text-dim)" }}>Uraian:</span>{" "}
-                          <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>&quot;{selectedGroup.uraianPenugasan || "-"}&quot;</span>
+                        <div className="metric-card animate-in">
+                          <div className="metric-label">Rata-rata Anggota</div>
+                          <div className="metric-value">{(suratGroups.reduce((a, g) => a + g.totalPelaksana, 0) / suratGroups.length).toFixed(1)}</div>
+                          <div className="metric-sub">Personel per Surat Tugas</div>
                         </div>
-                        <div style={{ marginTop: 10, display: "flex", gap: 20, fontSize: "0.78rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
-                          <span>SP2D Nominal: <strong style={{ color: "var(--text-title)" }}>Rp {fmt(selectedGroup.sp2dNominal)}</strong></span>
-                          <span>No SPM: <strong style={{ color: "var(--text-title)" }}>{selectedGroup.noSpm || "-"}</strong></span>
-                          <span>Kode Akun: <strong style={{ color: "var(--text-title)" }}>{selectedGroup.kodeAkun || "-"}</strong></span>
+                        <div className="metric-card animate-in">
+                          <div className="metric-label">Total Realisasi</div>
+                          <div className="metric-value currency">{fmtShort(suratGroups.reduce((a, g) => a + g.totalBiayaRombongan, 0))}</div>
+                          <div className="metric-sub">Akumulasi seluruh rombongan</div>
                         </div>
                       </div>
 
-                      <div className="section-title"><span className="icon">👥</span> Daftar Personel ({selectedGroup.totalPelaksana} Orang)</div>
-                      <div className="table-container animate-in">
-                        <div className="table-scroll">
-                          <table className="data-table">
-                            <thead>
-                              <tr>
-                                <th>No</th><th>Nama</th><th>Jabatan</th>
-                                <th>UH (Rp)</th><th>Hotel</th><th>Hotel (Rp)</th>
-                                <th>Maskapai Pergi</th><th>Tiket Pergi</th>
-                                <th>Maskapai Pulang</th><th>Tiket Pulang</th>
-                                <th>DPR (Rp)</th><th>Total Biaya</th><th>Status AI</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedGroup.pelaksanaList.map((p) => (
-                                <tr key={p.id}>
-                                  <td>{p.no_urut}</td>
-                                  <td style={{ fontWeight: 500 }}>{p.nama_pelaksana}</td>
-                                  <td>{p.jabatan}</td>
-                                  <td className="currency">{fmt(p.uang_harian_diterima)}</td>
-                                  <td>{p.nama_hotel}</td>
-                                  <td className="currency">{fmt(p.nilai_hotel)}</td>
-                                  <td>{p.berangkat_maskapai}</td>
-                                  <td className="currency">{fmt(p.berangkat_nilai)}</td>
-                                  <td>{p.pulang_maskapai}</td>
-                                  <td className="currency">{fmt(p.pulang_nilai)}</td>
-                                  <td className="currency">{fmt(p.dpr_nilai_transportasi)}</td>
-                                  <td className="currency" style={{ fontWeight: 600 }}>{fmt(p.nilai_total_biaya)}</td>
-                                  <td>{statusBadge(p.status_validasi_ai)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                      <div className="section-title"><span className="icon">📑</span> Pilih Nomor Surat Tugas</div>
+                      <div style={{ marginBottom: 20 }}>
+                        <select
+                          className="form-select"
+                          style={{ width: "100%", maxWidth: 600 }}
+                          value={selectedGroup?.groupKey || ""}
+                          onChange={(e) => {
+                            const g = suratGroups.find((x) => x.groupKey === e.target.value);
+                            setSelectedGroup(g);
+                          }}
+                        >
+                          {suratGroups.map((g) => (
+                            <option key={g.groupKey} value={g.groupKey}>{g.displayLabel}</option>
+                          ))}
+                        </select>
                       </div>
+
+                      {selectedGroup && (
+                        <>
+                          <div className="surat-card animate-in">
+                            <div className="surat-card-header">
+                              <div>
+                                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600, letterSpacing: 0.5 }}>
+                                  NOMOR SURAT TUGAS & SPD
+                                </div>
+                                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--text-title)", marginTop: 4 }}>
+                                  {selectedGroup.noSuratTugasSpd}
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                                <span className="badge" style={{
+                                  background: "var(--accent-muted)", color: "var(--accent)",
+                                  border: "1px solid var(--border)", padding: "6px 14px", fontSize: "0.82rem"
+                                }}>
+                                  Kegiatan No. {selectedGroup.noUrut}
+                                </span>
+                                <a
+                                  href={`/api/export?suratTugas=${encodeURIComponent(selectedGroup.noSuratTugasSpd)}`}
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.78rem" }}
+                                  download
+                                  title="Unduh seluruh pelaksana surat tugas ini ke format Excel (.xlsx)"
+                                >
+                                  <span>📥</span> Ekspor Excel
+                                </a>
+                              </div>
+                            </div>
+                            <div className="surat-card-meta">
+                              <div><div className="meta-label">Kota Tujuan</div><div className="meta-value">📍 {selectedGroup.tujuan}</div></div>
+                              <div><div className="meta-label">Periode Penugasan</div><div className="meta-value">📅 {selectedGroup.tglMulai} s/d {selectedGroup.tglSelesai}</div></div>
+                              <div><div className="meta-label">Total Pelaksana</div><div className="meta-value">👥 {selectedGroup.totalPelaksana} Orang</div></div>
+                              <div><div className="meta-label">Total Biaya Rombongan</div><div className="meta-value currency">💰 Rp {fmt(selectedGroup.totalBiayaRombongan)}</div></div>
+                            </div>
+                            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--border)", fontSize: "0.82rem" }}>
+                              <span style={{ color: "var(--text-dim)" }}>Uraian:</span>{" "}
+                              <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>&quot;{selectedGroup.uraianPenugasan || "-"}&quot;</span>
+                            </div>
+                            <div style={{ marginTop: 10, display: "flex", gap: 20, fontSize: "0.78rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
+                              <span>SP2D Nominal: <strong style={{ color: "var(--text-title)" }}>Rp {fmt(selectedGroup.sp2dNominal)}</strong></span>
+                              <span>No SPM: <strong style={{ color: "var(--text-title)" }}>{selectedGroup.noSpm || "-"}</strong></span>
+                              <span>Kode Akun: <strong style={{ color: "var(--text-title)" }}>{selectedGroup.kodeAkun || "-"}</strong></span>
+                            </div>
+                          </div>
+
+                          <div className="section-title"><span className="icon">👥</span> Daftar Personel ({selectedGroup.totalPelaksana} Orang)</div>
+                          <div className="table-container animate-in">
+                            <div className="table-scroll">
+                              <table className="data-table">
+                                <thead>
+                                  <tr>
+                                    <th>No</th><th>Nama</th><th>Jabatan</th>
+                                    <th>UH (Rp)</th><th>Hotel</th><th>Hotel (Rp)</th>
+                                    <th>Maskapai Pergi</th><th>Tiket Pergi</th>
+                                    <th>Maskapai Pulang</th><th>Tiket Pulang</th>
+                                    <th>DPR (Rp)</th><th>Total Biaya</th><th>Status AI</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedGroup.pelaksanaList.map((p) => (
+                                    <tr key={p.id}>
+                                      <td>{p.no_urut}</td>
+                                      <td style={{ fontWeight: 500 }}>{p.nama_pelaksana}</td>
+                                      <td>{p.jabatan}</td>
+                                      <td className="currency">{fmt(p.uang_harian_diterima)}</td>
+                                      <td>{p.nama_hotel}</td>
+                                      <td className="currency">{fmt(p.nilai_hotel)}</td>
+                                      <td>{p.berangkat_maskapai}</td>
+                                      <td className="currency">{fmt(p.berangkat_nilai)}</td>
+                                      <td>{p.pulang_maskapai}</td>
+                                      <td className="currency">{fmt(p.pulang_nilai)}</td>
+                                      <td className="currency">{fmt(p.dpr_nilai_transportasi)}</td>
+                                      <td className="currency" style={{ fontWeight: 600 }}>{fmt(p.nilai_total_biaya)}</td>
+                                      <td>{statusBadge(p.status_validasi_ai)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </>
                   )}
-                </>
-              )}
 
-              {suratGroups.length === 0 && (
+                  {suratGroups.length === 0 && (
                     <div className="empty-state"><div className="empty-state-icon">📭</div><div className="empty-state-text">Belum ada data untuk kategori ini</div></div>
                   )}
                 </>
@@ -1581,7 +1581,7 @@ export default function Home() {
                   <div className="form-grid">
                     <div className="form-group"><label className="form-label">Nilai Transportasi DPR (Lump Sum)</label><input className="form-input" type="number" value={formData.dpr_nilai_transportasi} onChange={(e) => updateForm("dpr_nilai_transportasi", Number(e.target.value))} /></div>
                     <div className="form-group"><label className="form-label">Nilai Hotel DPR</label><input className="form-input" type="number" value={formData.dpr_nilai_hotel} onChange={(e) => updateForm("dpr_nilai_hotel", Number(e.target.value))} /></div>
-                    <div className="form-group"><label className="form-label">Nilai Taksi DPR</label><input className="form-input" type="number" value={formData.dpr_nilai_taksi} onChange={(e) => updateForm("dpr_nilai_taksi", Number(e.target.value))} /></div>
+                    <div className="form-group"><label className="form-label">Nilai Transport DPR</label><input className="form-input" type="number" value={formData.dpr_nilai_taksi} onChange={(e) => updateForm("dpr_nilai_taksi", Number(e.target.value))} /></div>
                     <div className="form-group"><label className="form-label">Keterangan Penggunaan DPR</label><input className="form-input" value={formData.dpr_keterangan} onChange={(e) => updateForm("dpr_keterangan", e.target.value)} placeholder="LUMP SUM" /></div>
                   </div>
                 )}
@@ -1754,7 +1754,7 @@ export default function Home() {
                   <span className="chip-val currency">Rp {fmt(detailModalGroup.totalTransport)}</span>
                 </div>
                 <div className="cost-chip">
-                  <span className="chip-label">🚕 Total DPR / Taksi:</span>
+                  <span className="chip-label">🚗 Total DPR / Transport:</span>
                   <span className="chip-val currency">Rp {fmt(detailModalGroup.totalDpr)}</span>
                 </div>
               </div>
@@ -1937,7 +1937,7 @@ export default function Home() {
                     Rp {fmt(selectedPersonModal.totalTransport)}
                   </div>
                   <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 4 }}>
-                    Pesawat, kereta, taksi & transpor
+                    Pesawat, kereta & transport lokal
                   </div>
                 </div>
               </div>
