@@ -66,13 +66,13 @@ const DEFAULT_PAGU = {
     total: 1500000000, // Rp 1.5 Miliar
     kabadan: 900000000, // Rp 900 Jt
     sestama: 200000000, // Rp 200 Jt
-    protopim: 400000000, // Rp 400 Jt
+    kasubagTu: 150000000, // Rp 150 Jt
+    protopim: 250000000, // Rp 250 Jt
   },
   tim: {
     total: 2000000000, // Rp 2.0 Miliar
-    kasubagTu: 100000000, // Rp 100 Jt
     rumahTangga: 100000000, // Rp 100 Jt
-    tuKepala: 500000000, // Rp 500 Jt
+    tuKepala: 600000000, // Rp 600 Jt
     protokol: 300000000, // Rp 300 Jt
     perangkat: 1000000000, // Rp 1 Miliar
   },
@@ -166,16 +166,20 @@ export default function Home() {
           const u = (r.uraian_penugasan || "").toLowerCase();
 
           if (item.key === "kabadan") {
-            return isPim && (n.includes("sahat") || n.includes("karding") || j.includes("kepala badan"));
+            return isPim && (n.includes("sahat") || n.includes("karding") || (j.includes("kepala badan") && !n.includes("amrie")));
           }
           if (item.key === "sestama") {
             return isPim && (n.includes("riswan") || j.includes("sekretaris") || j.includes("sestama") || j.includes("inspektur"));
           }
-          if (item.key === "protopim") {
-            return isPim && !(n.includes("sahat") || n.includes("karding") || j.includes("kepala badan") || n.includes("riswan") || j.includes("sekretaris") || j.includes("sestama") || j.includes("inspektur"));
-          }
           if (item.key === "kasubagTu") {
-            return !isPim && (j.includes("kasubag") || j.includes("kasubbag") || j.includes("subbagian tata usaha") || (n.includes("reza") && j.includes("subbagian")));
+            return isPim && (n.includes("amrie") || j.includes("tata usaha kepala") || (j.includes("kasubag") && !j.includes("rt") && !j.includes("protokol")));
+          }
+          if (item.key === "protopim") {
+            return isPim && !(
+              n.includes("sahat") || n.includes("karding") || (j.includes("kepala badan") && !n.includes("amrie")) ||
+              n.includes("riswan") || j.includes("sekretaris") || j.includes("sestama") || j.includes("inspektur") ||
+              n.includes("amrie") || j.includes("tata usaha kepala") || (j.includes("kasubag") && !j.includes("rt") && !j.includes("protokol"))
+            );
           }
           if (item.key === "rumahTangga") {
             return !isPim && (j.includes("rumah tangga") || u.includes("rumah tangga") || j.includes("rt ") || u.includes("sarana") || j.includes("pengadministrasi perkantoran") || n.includes("sumarno") || n.includes("henrico"));
@@ -249,8 +253,20 @@ export default function Home() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.pimpinan && parsed?.tim) {
-          setPaguConfig(parsed);
-          setPaguEditForm(parsed);
+          const migrated = {
+            pimpinan: {
+              ...DEFAULT_PAGU.pimpinan,
+              ...parsed.pimpinan,
+              kasubagTu: parsed.pimpinan?.kasubagTu ?? parsed.tim?.kasubagTu ?? DEFAULT_PAGU.pimpinan.kasubagTu,
+            },
+            tim: {
+              ...DEFAULT_PAGU.tim,
+              ...parsed.tim,
+            },
+          };
+          delete migrated.tim.kasubagTu;
+          setPaguConfig(migrated);
+          setPaguEditForm(migrated);
         }
       }
     } catch (e) {
@@ -2692,6 +2708,25 @@ export default function Home() {
                 </div>
 
                 <div className="pagu-input-group">
+                  <label>Pagu Kasubag TU (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.pimpinan?.kasubagTu || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          pimpinan: { ...paguEditForm.pimpinan, kasubagTu: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.pimpinan?.kasubagTu)}
+                  </div>
+                </div>
+
+                <div className="pagu-input-group">
                   <label>Pagu Protopim (Rp)</label>
                   <div className="pagu-input-row">
                     <input
@@ -2730,25 +2765,6 @@ export default function Home() {
                   </div>
                   <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
                     {fmtShort(paguEditForm.tim?.total)}
-                  </div>
-                </div>
-
-                <div className="pagu-input-group">
-                  <label>Pagu Kasubag TU (Rp)</label>
-                  <div className="pagu-input-row">
-                    <input
-                      type="number"
-                      value={paguEditForm.tim?.kasubagTu || 0}
-                      onChange={(e) =>
-                        setPaguEditForm({
-                          ...paguEditForm,
-                          tim: { ...paguEditForm.tim, kasubagTu: Number(e.target.value) },
-                        })
-                      }
-                    />
-                  </div>
-                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
-                    {fmtShort(paguEditForm.tim?.kasubagTu)}
                   </div>
                 </div>
 
