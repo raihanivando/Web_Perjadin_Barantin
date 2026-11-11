@@ -58,6 +58,26 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 // ============================
+// DEFAULT PAGU ANGGARAN (DIPA / POK)
+// ============================
+const DEFAULT_PAGU = {
+  pimpinan: {
+    total: 1500000000, // Rp 1.5 Miliar
+    kabadan: 900000000, // Rp 900 Jt
+    sestama: 200000000, // Rp 200 Jt
+    protopim: 400000000, // Rp 400 Jt
+  },
+  tim: {
+    total: 2000000000, // Rp 2.0 Miliar
+    kasubagTu: 100000000, // Rp 100 Jt
+    rumahTangga: 100000000, // Rp 100 Jt
+    tuKepala: 500000000, // Rp 500 Jt
+    protokol: 300000000, // Rp 300 Jt
+    perangkat: 1000000000, // Rp 1 Miliar
+  },
+};
+
+// ============================
 // MAIN APP
 // ============================
 export default function Home() {
@@ -83,6 +103,11 @@ export default function Home() {
   const [detailModalKey, setDetailModalKey] = useState(null);
   const [sortBy, setSortBy] = useState("newest"); // "newest" | "oldest" | "date_desc" | "date_asc" | "cost_desc" | "cost_asc"
 
+  // Budget Monitoring (Pagu DIPA/POK) States
+  const [paguConfig, setPaguConfig] = useState(DEFAULT_PAGU);
+  const [showPaguModal, setShowPaguModal] = useState(false);
+  const [paguEditForm, setPaguEditForm] = useState(DEFAULT_PAGU);
+
   // Personnel Monitoring States
   const [personnelList, setPersonnelList] = useState([]);
   const [klasifikasiTab, setKlasifikasiTab] = useState("personel"); // "personel" | "surat"
@@ -92,6 +117,41 @@ export default function Home() {
   const [selectedPersonModal, setSelectedPersonModal] = useState(null);
   const [expandedPersonnelCards, setExpandedPersonnelCards] = useState(new Set());
   const [personModalTripSearch, setPersonModalTripSearch] = useState("");
+
+  // Load custom pagu from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("perjadin_budget_pagu_v1");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.pimpinan && parsed?.tim) {
+          setPaguConfig(parsed);
+          setPaguEditForm(parsed);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load pagu from localStorage", e);
+    }
+  }, []);
+
+  const handleSavePagu = () => {
+    setPaguConfig(paguEditForm);
+    try {
+      localStorage.setItem("perjadin_budget_pagu_v1", JSON.stringify(paguEditForm));
+    } catch (e) {}
+    setShowPaguModal(false);
+    addToast("Pagu anggaran berhasil diperbarui!", "success");
+  };
+
+  const handleResetPagu = () => {
+    setPaguConfig(DEFAULT_PAGU);
+    setPaguEditForm(DEFAULT_PAGU);
+    try {
+      localStorage.removeItem("perjadin_budget_pagu_v1");
+    } catch (e) {}
+    setShowPaguModal(false);
+    addToast("Pagu anggaran dikembalikan ke default!", "info");
+  };
 
   const toggleExpandPersonnelCard = (nama) => {
     setExpandedPersonnelCards((prev) => {
@@ -536,6 +596,231 @@ export default function Home() {
 
               {stats && (
                 <>
+                  {/* Monitoring Pagu & Penyerapan Anggaran (Sketch User) */}
+                  {stats.budgetMonitoring && (
+                    <div className="budget-monitoring-section animate-in">
+                      <div className="budget-section-header">
+                        <div className="budget-section-header-left">
+                          <h3>📊 Monitoring Pagu & Penyerapan Anggaran</h3>
+                          <p>Visualisasi daya serap anggaran berbasis POK/DIPA dengan indikator arsiran realisasi per pimpinan dan tim</p>
+                        </div>
+                        <div className="budget-section-header-right">
+                          <button
+                            className="btn-pagu-settings"
+                            onClick={() => {
+                              setPaguEditForm({ ...paguConfig });
+                              setShowPaguModal(true);
+                            }}
+                            title="Sesuaikan alokasi Pagu Anggaran (DIPA/POK)"
+                          >
+                            <span>⚙️</span>
+                            <span>Atur Pagu Anggaran</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="budget-grid">
+                        {/* CARD 1: ANGGARAN PIMPINAN */}
+                        <div className="budget-card">
+                          <div className="budget-card-header">
+                            <div className="budget-card-title-group">
+                              <h4>👔 Anggaran Pimpinan</h4>
+                              <div className="budget-card-sub">
+                                {stats.budgetMonitoring.pimpinan.count} Penugasan Terdata
+                              </div>
+                            </div>
+                            <span className="budget-badge-pill budget-badge-amber">
+                              <span>⚡</span>
+                              <span>
+                                {paguConfig.pimpinan.total > 0
+                                  ? ((stats.budgetMonitoring.pimpinan.total / paguConfig.pimpinan.total) * 100).toFixed(1)
+                                  : 0}
+                                % Terserap
+                              </span>
+                            </span>
+                          </div>
+
+                          {/* Main Overall Bar */}
+                          <div className="budget-main-bar-block">
+                            <div className="budget-main-bar-top">
+                              <span className="main-bar-label">
+                                <span>📐</span> Bar Anggaran Pimpinan
+                              </span>
+                              <div className="main-bar-stats">
+                                <span>Pagu: <strong>{fmtShort(paguConfig.pimpinan.total)}</strong></span>
+                                <span>Terpakai: <strong>{fmtShort(stats.budgetMonitoring.pimpinan.total)}</strong></span>
+                              </div>
+                            </div>
+
+                            <div
+                              className="budget-bar-track"
+                              title={`Terpakai: Rp ${fmt(stats.budgetMonitoring.pimpinan.total)} dari Pagu Rp ${fmt(paguConfig.pimpinan.total)}`}
+                            >
+                              <div
+                                className="budget-bar-hatched budget-bar-hatched-amber"
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, paguConfig.pimpinan.total > 0 ? (stats.budgetMonitoring.pimpinan.total / paguConfig.pimpinan.total) * 100 : 0))}%`,
+                                }}
+                              >
+                                <span className="budget-bar-text">
+                                  {fmtShort(stats.budgetMonitoring.pimpinan.total)} (
+                                  {paguConfig.pimpinan.total > 0
+                                    ? ((stats.budgetMonitoring.pimpinan.total / paguConfig.pimpinan.total) * 100).toFixed(1)
+                                    : 0}
+                                  %)
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="budget-main-bar-bottom">
+                              <span>Sisa Pagu: <b>{fmtShort(Math.max(0, paguConfig.pimpinan.total - stats.budgetMonitoring.pimpinan.total))}</b></span>
+                              <span>Realisasi: <b>Rp {fmt(stats.budgetMonitoring.pimpinan.total)}</b></span>
+                            </div>
+                          </div>
+
+                          {/* Sub-Bars for Pimpinan */}
+                          <div className="budget-sub-list">
+                            {stats.budgetMonitoring.pimpinan.items.map((item) => {
+                              const itemPagu = paguConfig.pimpinan[item.key] || 1;
+                              const pct = itemPagu > 0 ? (item.total / itemPagu) * 100 : 0;
+                              const sisa = Math.max(0, itemPagu - item.total);
+                              return (
+                                <div key={item.key} className="budget-sub-item">
+                                  <div className="budget-sub-info">
+                                    <div className="budget-sub-name-group">
+                                      <span className="budget-sub-name">{item.label}</span>
+                                      <span className="budget-sub-count">{item.count} penugasan</span>
+                                    </div>
+                                    <div className="budget-sub-values">
+                                      <span className="budget-sub-used">{fmtShort(item.total)}</span>
+                                      <span className="budget-sub-pagu">/ {fmtShort(itemPagu)}</span>
+                                    </div>
+                                  </div>
+
+                                  <div
+                                    className="budget-sub-track"
+                                    title={`${item.label}: Terpakai Rp ${fmt(item.total)} dari Pagu Rp ${fmt(itemPagu)} (${pct.toFixed(1)}%)`}
+                                  >
+                                    <div
+                                      className="budget-bar-hatched budget-bar-hatched-amber"
+                                      style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+                                    />
+                                  </div>
+
+                                  <div className="budget-sub-meta">
+                                    <span>{item.desc}</span>
+                                    <span className="percent-indicator amber">
+                                      {pct.toFixed(1)}% (Sisa {fmtShort(sisa)})
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* CARD 2: ANGGARAN TIM */}
+                        <div className="budget-card">
+                          <div className="budget-card-header">
+                            <div className="budget-card-title-group">
+                              <h4>👥 Anggaran Tim</h4>
+                              <div className="budget-card-sub">
+                                {stats.budgetMonitoring.tim.count} Penugasan Terdata
+                              </div>
+                            </div>
+                            <span className="budget-badge-pill budget-badge-cyan">
+                              <span>⚡</span>
+                              <span>
+                                {paguConfig.tim.total > 0
+                                  ? ((stats.budgetMonitoring.tim.total / paguConfig.tim.total) * 100).toFixed(1)
+                                  : 0}
+                                % Terserap
+                              </span>
+                            </span>
+                          </div>
+
+                          {/* Main Overall Bar */}
+                          <div className="budget-main-bar-block">
+                            <div className="budget-main-bar-top">
+                              <span className="main-bar-label">
+                                <span>📐</span> Bar Anggaran Tim
+                              </span>
+                              <div className="main-bar-stats">
+                                <span>Pagu: <strong>{fmtShort(paguConfig.tim.total)}</strong></span>
+                                <span>Terpakai: <strong>{fmtShort(stats.budgetMonitoring.tim.total)}</strong></span>
+                              </div>
+                            </div>
+
+                            <div
+                              className="budget-bar-track"
+                              title={`Terpakai: Rp ${fmt(stats.budgetMonitoring.tim.total)} dari Pagu Rp ${fmt(paguConfig.tim.total)}`}
+                            >
+                              <div
+                                className="budget-bar-hatched budget-bar-hatched-cyan"
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, paguConfig.tim.total > 0 ? (stats.budgetMonitoring.tim.total / paguConfig.tim.total) * 100 : 0))}%`,
+                                }}
+                              >
+                                <span className="budget-bar-text">
+                                  {fmtShort(stats.budgetMonitoring.tim.total)} (
+                                  {paguConfig.tim.total > 0
+                                    ? ((stats.budgetMonitoring.tim.total / paguConfig.tim.total) * 100).toFixed(1)
+                                    : 0}
+                                  %)
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="budget-main-bar-bottom">
+                              <span>Sisa Pagu: <b>{fmtShort(Math.max(0, paguConfig.tim.total - stats.budgetMonitoring.tim.total))}</b></span>
+                              <span>Realisasi: <b>Rp {fmt(stats.budgetMonitoring.tim.total)}</b></span>
+                            </div>
+                          </div>
+
+                          {/* Sub-Bars for Tim */}
+                          <div className="budget-sub-list">
+                            {stats.budgetMonitoring.tim.items.map((item) => {
+                              const itemPagu = paguConfig.tim[item.key] || 1;
+                              const pct = itemPagu > 0 ? (item.total / itemPagu) * 100 : 0;
+                              const sisa = Math.max(0, itemPagu - item.total);
+                              return (
+                                <div key={item.key} className="budget-sub-item">
+                                  <div className="budget-sub-info">
+                                    <div className="budget-sub-name-group">
+                                      <span className="budget-sub-name">{item.label}</span>
+                                      <span className="budget-sub-count">{item.count} penugasan</span>
+                                    </div>
+                                    <div className="budget-sub-values">
+                                      <span className="budget-sub-used">{fmtShort(item.total)}</span>
+                                      <span className="budget-sub-pagu">/ {fmtShort(itemPagu)}</span>
+                                    </div>
+                                  </div>
+
+                                  <div
+                                    className="budget-sub-track"
+                                    title={`${item.label}: Terpakai Rp ${fmt(item.total)} dari Pagu Rp ${fmt(itemPagu)} (${pct.toFixed(1)}%)`}
+                                  >
+                                    <div
+                                      className="budget-bar-hatched budget-bar-hatched-cyan"
+                                      style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+                                    />
+                                  </div>
+
+                                  <div className="budget-sub-meta">
+                                    <span>{item.desc}</span>
+                                    <span className="percent-indicator cyan">
+                                      {pct.toFixed(1)}% (Sisa {fmtShort(sisa)})
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="charts-grid">
                     <div className="chart-card animate-in">
                       <h3>📈 Realisasi Pengeluaran per Bulan</h3>
@@ -2111,6 +2396,238 @@ export default function Home() {
                   Tutup
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Pengaturan Pagu Anggaran (DIPA / POK) */}
+      {showPaguModal && (
+        <div className="pagu-modal-overlay" onClick={() => setShowPaguModal(false)}>
+          <div className="pagu-modal-content animate-in" onClick={(e) => e.stopPropagation()}>
+            <div className="pagu-modal-header">
+              <h3>⚙️ Pengaturan Pagu Anggaran (DIPA / POK)</h3>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                style={{ padding: "4px 10px" }}
+                onClick={() => setShowPaguModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 18 }}>
+              Atur target pagu anggaran (alokasi penuh) untuk Anggaran Pimpinan dan Anggaran Tim. Nilai ini menjadi batas 100% pada bar visualisasi arsiran pemantauan realisasi.
+            </p>
+
+            <div className="pagu-modal-grid">
+              {/* Kolom Pimpinan */}
+              <div className="pagu-modal-col">
+                <h4>👔 Alokasi Pimpinan</h4>
+                <div className="pagu-input-group">
+                  <label>Total Pagu Pimpinan (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.pimpinan?.total || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          pimpinan: { ...paguEditForm.pimpinan, total: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.pimpinan?.total)}
+                  </div>
+                </div>
+
+                <div className="pagu-input-group">
+                  <label>Pagu Kabadan (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.pimpinan?.kabadan || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          pimpinan: { ...paguEditForm.pimpinan, kabadan: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.pimpinan?.kabadan)}
+                  </div>
+                </div>
+
+                <div className="pagu-input-group">
+                  <label>Pagu Sestama (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.pimpinan?.sestama || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          pimpinan: { ...paguEditForm.pimpinan, sestama: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.pimpinan?.sestama)}
+                  </div>
+                </div>
+
+                <div className="pagu-input-group">
+                  <label>Pagu Protopim (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.pimpinan?.protopim || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          pimpinan: { ...paguEditForm.pimpinan, protopim: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.pimpinan?.protopim)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Kolom Tim */}
+              <div className="pagu-modal-col">
+                <h4>👥 Alokasi Tim</h4>
+                <div className="pagu-input-group">
+                  <label>Total Pagu Tim (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.tim?.total || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          tim: { ...paguEditForm.tim, total: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.tim?.total)}
+                  </div>
+                </div>
+
+                <div className="pagu-input-group">
+                  <label>Pagu Kasubag TU (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.tim?.kasubagTu || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          tim: { ...paguEditForm.tim, kasubagTu: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.tim?.kasubagTu)}
+                  </div>
+                </div>
+
+                <div className="pagu-input-group">
+                  <label>Pagu Rumah Tangga (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.tim?.rumahTangga || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          tim: { ...paguEditForm.tim, rumahTangga: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.tim?.rumahTangga)}
+                  </div>
+                </div>
+
+                <div className="pagu-input-group">
+                  <label>Pagu Tata Usaha Kepala (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.tim?.tuKepala || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          tim: { ...paguEditForm.tim, tuKepala: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.tim?.tuKepala)}
+                  </div>
+                </div>
+
+                <div className="pagu-input-group">
+                  <label>Pagu Protokol (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.tim?.protokol || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          tim: { ...paguEditForm.tim, protokol: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.tim?.protokol)}
+                  </div>
+                </div>
+
+                <div className="pagu-input-group">
+                  <label>Pagu Perangkat (Rp)</label>
+                  <div className="pagu-input-row">
+                    <input
+                      type="number"
+                      value={paguEditForm.tim?.perangkat || 0}
+                      onChange={(e) =>
+                        setPaguEditForm({
+                          ...paguEditForm,
+                          tim: { ...paguEditForm.tim, perangkat: Number(e.target.value) },
+                        })
+                      }
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 2 }}>
+                    {fmtShort(paguEditForm.tim?.perangkat)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pagu-modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={handleResetPagu}>
+                Reset ke Default
+              </button>
+              <button type="button" className="btn btn-primary" onClick={handleSavePagu}>
+                💾 Simpan Pagu
+              </button>
             </div>
           </div>
         </div>
