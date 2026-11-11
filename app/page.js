@@ -108,6 +108,31 @@ export default function Home() {
   const [showPaguModal, setShowPaguModal] = useState(false);
   const [paguEditForm, setPaguEditForm] = useState(DEFAULT_PAGU);
 
+  // Budget Detail Modal States
+  const [selectedBudgetModal, setSelectedBudgetModal] = useState(null);
+  const [budgetModalSearch, setBudgetModalSearch] = useState("");
+  const [budgetModalTujuanFilter, setBudgetModalTujuanFilter] = useState("SEMUA");
+  const [budgetModalStatusFilter, setBudgetModalStatusFilter] = useState("SEMUA");
+
+  const handleOpenBudgetModal = (item, paguValue, colorTheme = "amber") => {
+    if (!item) return;
+    setSelectedBudgetModal({
+      key: item.key,
+      title: item.label,
+      desc: item.desc,
+      pagu: paguValue || 0,
+      total: item.total || 0,
+      count: item.count || 0,
+      suratTugasCount: item.suratTugasCount || 0,
+      tujuanStats: item.tujuanStats || [],
+      records: item.records || [],
+      colorTheme,
+    });
+    setBudgetModalSearch("");
+    setBudgetModalTujuanFilter("SEMUA");
+    setBudgetModalStatusFilter("SEMUA");
+  };
+
   // Personnel Monitoring States
   const [personnelList, setPersonnelList] = useState([]);
   const [klasifikasiTab, setKlasifikasiTab] = useState("personel"); // "personel" | "surat"
@@ -458,6 +483,32 @@ export default function Home() {
     return list;
   }, [personnelList, personnelSearch, personnelSort]);
 
+  // Filtered trips for budget detail modal
+  const filteredBudgetTrips = useMemo(() => {
+    if (!selectedBudgetModal?.records) return [];
+    return selectedBudgetModal.records.filter((r) => {
+      if (budgetModalTujuanFilter !== "SEMUA" && r.tujuan !== budgetModalTujuanFilter) {
+        return false;
+      }
+      if (budgetModalStatusFilter !== "SEMUA") {
+        if (budgetModalStatusFilter === "Valid" && !r.status_validasi_ai.includes("Valid")) return false;
+        if (budgetModalStatusFilter === "Error" && !r.status_validasi_ai.includes("Error")) return false;
+        if (budgetModalStatusFilter === "Perlu" && !r.status_validasi_ai.includes("Perlu")) return false;
+      }
+      if (budgetModalSearch.trim()) {
+        const q = budgetModalSearch.toLowerCase();
+        const matches =
+          (r.nama_pelaksana || "").toLowerCase().includes(q) ||
+          (r.tujuan || "").toLowerCase().includes(q) ||
+          (r.no_surat_tugas_spd || "").toLowerCase().includes(q) ||
+          (r.uraian_penugasan || "").toLowerCase().includes(q) ||
+          (r.jabatan || "").toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [selectedBudgetModal, budgetModalTujuanFilter, budgetModalStatusFilter, budgetModalSearch]);
+
   return (
     <>
       {/* Toasts */}
@@ -641,14 +692,21 @@ export default function Home() {
                           </div>
 
                           {/* Main Overall Bar */}
-                          <div className="budget-main-bar-block">
+                          <div
+                            className="budget-main-bar-block budget-clickable-row amber"
+                            onClick={() => handleOpenBudgetModal(stats.budgetMonitoring.pimpinan, paguConfig.pimpinan.total, "amber")}
+                            title="Klik untuk melihat seluruh riwayat perjalanan dinas dan Surat Tugas Pimpinan"
+                          >
                             <div className="budget-main-bar-top">
                               <span className="main-bar-label">
                                 <span>📐</span> Bar Anggaran Pimpinan
                               </span>
-                              <div className="main-bar-stats">
+                              <div className="main-bar-stats" style={{ alignItems: "center" }}>
                                 <span>Pagu: <strong>{fmtShort(paguConfig.pimpinan.total)}</strong></span>
                                 <span>Terpakai: <strong>{fmtShort(stats.budgetMonitoring.pimpinan.total)}</strong></span>
+                                <button type="button" className="btn-budget-inspect">
+                                  🔍 Rincian ({stats.budgetMonitoring.pimpinan.suratTugasCount} ST)
+                                </button>
                               </div>
                             </div>
 
@@ -685,11 +743,19 @@ export default function Home() {
                               const pct = itemPagu > 0 ? (item.total / itemPagu) * 100 : 0;
                               const sisa = Math.max(0, itemPagu - item.total);
                               return (
-                                <div key={item.key} className="budget-sub-item">
+                                <div
+                                  key={item.key}
+                                  className="budget-sub-item budget-clickable-row amber"
+                                  onClick={() => handleOpenBudgetModal(item, itemPagu, "amber")}
+                                  title={`Klik untuk melihat rincian perjalanan dinas ${item.label}`}
+                                >
                                   <div className="budget-sub-info">
                                     <div className="budget-sub-name-group">
                                       <span className="budget-sub-name">{item.label}</span>
                                       <span className="budget-sub-count">{item.count} penugasan</span>
+                                      <button type="button" className="btn-budget-inspect">
+                                        🔍 Rincian ({item.suratTugasCount || item.count} ST)
+                                      </button>
                                     </div>
                                     <div className="budget-sub-values">
                                       <span className="budget-sub-used">{fmtShort(item.total)}</span>
@@ -740,14 +806,21 @@ export default function Home() {
                           </div>
 
                           {/* Main Overall Bar */}
-                          <div className="budget-main-bar-block">
+                          <div
+                            className="budget-main-bar-block budget-clickable-row cyan"
+                            onClick={() => handleOpenBudgetModal(stats.budgetMonitoring.tim, paguConfig.tim.total, "cyan")}
+                            title="Klik untuk melihat seluruh riwayat perjalanan dinas dan Surat Tugas Tim"
+                          >
                             <div className="budget-main-bar-top">
                               <span className="main-bar-label">
                                 <span>📐</span> Bar Anggaran Tim
                               </span>
-                              <div className="main-bar-stats">
+                              <div className="main-bar-stats" style={{ alignItems: "center" }}>
                                 <span>Pagu: <strong>{fmtShort(paguConfig.tim.total)}</strong></span>
                                 <span>Terpakai: <strong>{fmtShort(stats.budgetMonitoring.tim.total)}</strong></span>
+                                <button type="button" className="btn-budget-inspect">
+                                  🔍 Rincian ({stats.budgetMonitoring.tim.suratTugasCount} ST)
+                                </button>
                               </div>
                             </div>
 
@@ -784,11 +857,19 @@ export default function Home() {
                               const pct = itemPagu > 0 ? (item.total / itemPagu) * 100 : 0;
                               const sisa = Math.max(0, itemPagu - item.total);
                               return (
-                                <div key={item.key} className="budget-sub-item">
+                                <div
+                                  key={item.key}
+                                  className="budget-sub-item budget-clickable-row cyan"
+                                  onClick={() => handleOpenBudgetModal(item, itemPagu, "cyan")}
+                                  title={`Klik untuk melihat rincian perjalanan dinas ${item.label}`}
+                                >
                                   <div className="budget-sub-info">
                                     <div className="budget-sub-name-group">
                                       <span className="budget-sub-name">{item.label}</span>
                                       <span className="budget-sub-count">{item.count} penugasan</span>
+                                      <button type="button" className="btn-budget-inspect">
+                                        🔍 Rincian ({item.suratTugasCount || item.count} ST)
+                                      </button>
                                     </div>
                                     <div className="budget-sub-values">
                                       <span className="budget-sub-used">{fmtShort(item.total)}</span>
@@ -2628,6 +2709,311 @@ export default function Home() {
               <button type="button" className="btn btn-primary" onClick={handleSavePagu}>
                 💾 Simpan Pagu
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================== MODAL DETAIL REALISASI ANGGARAN & SURAT TUGAS ===================== */}
+      {selectedBudgetModal && (
+        <div className="modal-overlay" onClick={() => setSelectedBudgetModal(null)}>
+          <div
+            className="modal-container animate-in"
+            style={{ maxWidth: 1180, maxHeight: "92vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div
+                  className="personnel-avatar"
+                  style={{
+                    width: 52,
+                    height: 52,
+                    fontSize: "1.4rem",
+                    background:
+                      selectedBudgetModal.colorTheme === "cyan"
+                        ? "rgba(56, 189, 248, 0.2)"
+                        : "rgba(251, 194, 83, 0.2)",
+                    border: `2px solid ${
+                      selectedBudgetModal.colorTheme === "cyan" ? "#38bdf8" : "#fbc253"
+                    }`,
+                  }}
+                >
+                  {selectedBudgetModal.colorTheme === "cyan" ? "👥" : "👔"}
+                </div>
+                <div>
+                  <h2 style={{ fontSize: "1.25rem", margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
+                    <span>Rincian Realisasi: {selectedBudgetModal.title}</span>
+                    <span
+                      className={`budget-badge-pill ${
+                        selectedBudgetModal.colorTheme === "cyan" ? "budget-badge-cyan" : "budget-badge-amber"
+                      }`}
+                    >
+                      {selectedBudgetModal.pagu > 0
+                        ? ((selectedBudgetModal.total / selectedBudgetModal.pagu) * 100).toFixed(1)
+                        : 0}
+                      % Terserap
+                    </span>
+                  </h2>
+                  <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: 4 }}>
+                    <span>{selectedBudgetModal.desc}</span>
+                    <span> • <strong>{selectedBudgetModal.records.length}</strong> Penugasan</span>
+                    <span> • <strong>{selectedBudgetModal.suratTugasCount}</strong> Surat Tugas</span>
+                    <span> • <strong>{selectedBudgetModal.tujuanStats.length}</strong> Kota Tujuan</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setSelectedBudgetModal(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="modal-body" style={{ padding: "18px 24px" }}>
+              {/* Summary 4-Column Metric Strip */}
+              <div className="budget-detail-stats-grid">
+                <div className="budget-detail-stat-card">
+                  <div className="budget-detail-stat-label">Total Realisasi Terpakai</div>
+                  <div className="budget-detail-stat-value" style={{ color: selectedBudgetModal.colorTheme === "cyan" ? "#38bdf8" : "#fbc253" }}>
+                    Rp {fmt(selectedBudgetModal.total)}
+                  </div>
+                </div>
+                <div className="budget-detail-stat-card">
+                  <div className="budget-detail-stat-label">Alokasi Pagu Anggaran</div>
+                  <div className="budget-detail-stat-value">
+                    Rp {fmt(selectedBudgetModal.pagu)}
+                  </div>
+                </div>
+                <div className="budget-detail-stat-card">
+                  <div className="budget-detail-stat-label">Sisa Anggaran Tersedia</div>
+                  <div className="budget-detail-stat-value" style={{ color: "var(--success)" }}>
+                    Rp {fmt(Math.max(0, selectedBudgetModal.pagu - selectedBudgetModal.total))}
+                  </div>
+                </div>
+                <div className="budget-detail-stat-card">
+                  <div className="budget-detail-stat-label">Surat Tugas & Penugasan</div>
+                  <div className="budget-detail-stat-value">
+                    {selectedBudgetModal.suratTugasCount} <span style={{ fontSize: "0.76rem", fontWeight: 500, color: "var(--text-muted)" }}>ST ({selectedBudgetModal.records.length} org)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 📍 Filter Chips Berdasarkan Destinasi / Kota Tujuan */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>📍 Destinasi / Kota Tujuan yang Sudah Terealisasi (Klik untuk filter):</span>
+                </div>
+                <div className="budget-detail-tags">
+                  <button
+                    type="button"
+                    className={`budget-tag-chip ${budgetModalTujuanFilter === "SEMUA" ? (selectedBudgetModal.colorTheme === "cyan" ? "active cyan" : "active") : ""}`}
+                    onClick={() => setBudgetModalTujuanFilter("SEMUA")}
+                  >
+                    🌐 Semua Kota ({selectedBudgetModal.records.length})
+                  </button>
+                  {selectedBudgetModal.tujuanStats.map((t) => (
+                    <button
+                      key={t.tujuan}
+                      type="button"
+                      className={`budget-tag-chip ${budgetModalTujuanFilter === t.tujuan ? (selectedBudgetModal.colorTheme === "cyan" ? "active cyan" : "active") : ""}`}
+                      onClick={() => setBudgetModalTujuanFilter(t.tujuan)}
+                      title={`${t.tujuan}: ${t.count}x perjalanan (Total Rp ${fmt(t.total)})`}
+                    >
+                      📍 {t.tujuan} <strong style={{ opacity: 0.85 }}>({t.count}x)</strong>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filter & Search Bar */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: 240, position: "relative" }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{ width: "100%", paddingLeft: 34, fontSize: "0.82rem" }}
+                    placeholder="Cari nomor surat tugas, nama pelaksana, kota, atau uraian..."
+                    value={budgetModalSearch}
+                    onChange={(e) => setBudgetModalSearch(e.target.value)}
+                  />
+                  <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)", pointerEvents: "none" }}>
+                    🔍
+                  </span>
+                  {budgetModalSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setBudgetModalSearch("")}
+                      style={{
+                        position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                        background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer"
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ minWidth: 160 }}>
+                  <select
+                    className="form-select"
+                    style={{ width: "100%", fontSize: "0.82rem" }}
+                    value={budgetModalStatusFilter}
+                    onChange={(e) => setBudgetModalStatusFilter(e.target.value)}
+                  >
+                    <option value="SEMUA">🛡️ Semua Status AI</option>
+                    <option value="Valid">✅ Valid Saja</option>
+                    <option value="Error">❌ Error Saja</option>
+                    <option value="Perlu">⚠️ Perlu Cek</option>
+                  </select>
+                </div>
+
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                  Menampilkan <strong>{filteredBudgetTrips.length}</strong> dari {selectedBudgetModal.records.length} data
+                </div>
+              </div>
+
+              {/* Table List of Trips */}
+              <div className="table-scroll" style={{ maxHeight: "420px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                <table className="data-table" style={{ fontSize: "0.78rem" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 40, textAlign: "center" }}>No</th>
+                      <th>Surat Tugas & Tanggal</th>
+                      <th>Pelaksana & Jabatan</th>
+                      <th>📍 Tujuan</th>
+                      <th>Uraian Penugasan</th>
+                      <th style={{ textAlign: "right" }}>UH</th>
+                      <th style={{ textAlign: "right" }}>Hotel</th>
+                      <th style={{ textAlign: "right" }}>Transport</th>
+                      <th style={{ textAlign: "right" }}>Total Biaya</th>
+                      <th style={{ textAlign: "center" }}>Status AI</th>
+                      <th style={{ textAlign: "center" }}>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBudgetTrips.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} style={{ textAlign: "center", padding: 30, color: "var(--text-muted)" }}>
+                          Tidak ada perjalanan dinas yang sesuai dengan filter pencarian.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredBudgetTrips.map((r, idx) => (
+                        <tr key={r.id || idx}>
+                          <td style={{ textAlign: "center", color: "var(--text-muted)" }}>{r.no_urut || idx + 1}</td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: "var(--text-title)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={r.no_surat_tugas_spd}>
+                              {r.no_surat_tugas_spd || "Tanpa No ST"}
+                            </div>
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: 2 }}>
+                              📅 {r.tgl_mulai} {r.tgl_selesai && r.tgl_selesai !== r.tgl_mulai ? `s/d ${r.tgl_selesai}` : ""}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{r.nama_pelaksana}</div>
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }} title={r.jabatan}>
+                              {r.jabatan || "-"}
+                            </div>
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: 600, color: "var(--accent)" }}>📍 {r.tujuan || "-"}</span>
+                          </td>
+                          <td style={{ maxWidth: 220 }}>
+                            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }} title={r.uraian_penugasan}>
+                              {r.uraian_penugasan || "-"}
+                            </div>
+                          </td>
+                          <td className="currency" style={{ textAlign: "right" }}>{fmt(r.uang_harian_diterima)}</td>
+                          <td className="currency" style={{ textAlign: "right" }}>
+                            <div>{fmt(r.nilai_hotel)}</div>
+                            {r.nama_hotel && <div style={{ fontSize: "0.68rem", color: "var(--text-dim)" }}>🏨 {r.nama_hotel}</div>}
+                          </td>
+                          <td className="currency" style={{ textAlign: "right" }}>
+                            <div>{fmt(r.tiket_total + r.transport_total)}</div>
+                            {r.berangkat_maskapai && <div style={{ fontSize: "0.68rem", color: "var(--text-dim)" }}>✈️ {r.berangkat_maskapai}</div>}
+                          </td>
+                          <td className="currency" style={{ textAlign: "right", fontWeight: 700, color: "var(--text-title)" }}>
+                            Rp {fmt(r.nilai_total_biaya)}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {statusBadge(r.status_validasi_ai)}
+                          </td>
+                          <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                            <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                              {r.link_dokumen_spj && (
+                                <a
+                                  href={r.link_dokumen_spj}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ padding: "2px 6px", fontSize: "0.68rem" }}
+                                  title="Buka dokumen SPJ di Google Drive"
+                                >
+                                  🔗 SPJ
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: "2px 6px", fontSize: "0.68rem" }}
+                                onClick={() => {
+                                  const groupKey = (r.no_surat_tugas_spd || "").trim() || (r.no_urut != null ? `NO_URUT_${r.no_urut}` : `ID_${r.id}`);
+                                  setDetailModalKey(groupKey);
+                                }}
+                                title="Lihat detail seluruh rombongan Surat Tugas ini"
+                              >
+                                👥 Rombongan
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  {filteredBudgetTrips.length > 0 && (
+                    <tfoot>
+                      <tr style={{ background: "var(--bg-input)", fontWeight: 700 }}>
+                        <td colSpan={8} style={{ textAlign: "right", padding: "10px 14px", color: "var(--text-title)" }}>
+                          TOTAL REALISASI ({filteredBudgetTrips.length} KEGIATAN TERFILTER):
+                        </td>
+                        <td className="currency" style={{ textAlign: "right", padding: "10px 14px", color: selectedBudgetModal.colorTheme === "cyan" ? "#38bdf8" : "#fbc253", fontSize: "0.92rem" }}>
+                          Rp {fmt(filteredBudgetTrips.reduce((a, b) => a + (b.nilai_total_biaya || 0), 0))}
+                        </td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer" style={{ padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                Total <strong>{selectedBudgetModal.records.length}</strong> kegiatan penugasan terdata di alokasi <strong>{selectedBudgetModal.title}</strong>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <a
+                  href={`/api/export?kategori=${encodeURIComponent(selectedBudgetModal.records[0]?.kategori || "SEMUA")}`}
+                  className="btn btn-secondary btn-sm"
+                  download
+                  title="Unduh seluruh data perjalanan ke format Excel (.xlsx)"
+                >
+                  <span>📥</span> Ekspor Excel (.xlsx)
+                </a>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => setSelectedBudgetModal(null)}
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         </div>
