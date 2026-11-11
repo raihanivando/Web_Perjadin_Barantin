@@ -1089,7 +1089,10 @@ html, body {
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg), var(--shadow-glow);
-  animation: fadeInUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeInUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 1 !important;
+  position: relative;
+  z-index: 1001;
   overflow: hidden;
 }
 

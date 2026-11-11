@@ -30,10 +30,11 @@ const monthLabel = (ym) => {
 
 function statusBadge(status) {
   if (!status) return null;
-  if (status.includes("Valid")) return <span className="badge badge-valid">✅ Valid</span>;
-  if (status.includes("Error")) return <span className="badge badge-error">❌ Error</span>;
-  if (status.includes("Perlu")) return <span className="badge badge-warning">⚠️ Cek</span>;
-  return <span className="badge">{status}</span>;
+  const s = String(status);
+  if (s.includes("Valid")) return <span className="badge badge-valid">✅ Valid</span>;
+  if (s.includes("Error")) return <span className="badge badge-error">❌ Error</span>;
+  if (s.includes("Perlu")) return <span className="badge badge-warning">⚠️ Cek</span>;
+  return <span className="badge">{s}</span>;
 }
 
 // ============================
@@ -116,16 +117,114 @@ export default function Home() {
 
   const handleOpenBudgetModal = (item, paguValue, colorTheme = "amber") => {
     if (!item) return;
+
+    // Normalizer for trip records to ensure all fields are safely present
+    const normalizeTrip = (r) => ({
+      id: r.id,
+      no_urut: r.no_urut,
+      no_surat_tugas_spd: r.no_surat_tugas_spd || "",
+      nama_pelaksana: r.nama_pelaksana || "",
+      jabatan: r.jabatan || "",
+      pangkat_golongan: r.pangkat_golongan || "",
+      tujuan: r.tujuan || "",
+      uraian_penugasan: r.uraian_penugasan || "",
+      tgl_mulai: r.tgl_mulai || "",
+      tgl_selesai: r.tgl_selesai || "",
+      nilai_total_biaya: Number(r.nilai_total_biaya) || 0,
+      uang_harian_diterima: Number(r.uang_harian_diterima) || 0,
+      nilai_hotel: Number(r.nilai_hotel) || 0,
+      nama_hotel: r.nama_hotel || "",
+      berangkat_maskapai: r.berangkat_maskapai || "",
+      tiket_total:
+        r.tiket_total != null
+          ? Number(r.tiket_total) || 0
+          : (Number(r.berangkat_nilai) || 0) + (Number(r.pulang_nilai) || 0),
+      transport_total:
+        r.transport_total != null
+          ? Number(r.transport_total) || 0
+          : (Number(r.berangkat_taksi_nilai) || 0) +
+            (Number(r.pulang_taksi_nilai) || 0) +
+            (Number(r.dpr_nilai_transportasi) || 0),
+      status_validasi_ai: r.status_validasi_ai || "Valid",
+      link_dokumen_spj: r.link_dokumen_spj || "",
+      sp2d_nomor: r.sp2d_nomor || "",
+      no_spm: r.no_spm || "",
+      kategori: r.kategori || "",
+    });
+
+    let rawList = item.records;
+    if (!rawList || rawList.length === 0) {
+      if (item.key === "pimpinan") {
+        rawList = records.filter((r) => r.kategori === "Perjadin Pimpinan");
+      } else if (item.key === "tim") {
+        rawList = records.filter((r) => r.kategori === "Perjadin Tim");
+      } else {
+        rawList = records.filter((r) => {
+          const isPim = r.kategori === "Perjadin Pimpinan";
+          const n = (r.nama_pelaksana || "").toLowerCase();
+          const j = (r.jabatan || "").toLowerCase();
+          const u = (r.uraian_penugasan || "").toLowerCase();
+
+          if (item.key === "kabadan") {
+            return isPim && (n.includes("sahat") || n.includes("karding") || j.includes("kepala badan"));
+          }
+          if (item.key === "sestama") {
+            return isPim && (n.includes("riswan") || j.includes("sekretaris") || j.includes("sestama") || j.includes("inspektur"));
+          }
+          if (item.key === "protopim") {
+            return isPim && !(n.includes("sahat") || n.includes("karding") || j.includes("kepala badan") || n.includes("riswan") || j.includes("sekretaris") || j.includes("sestama") || j.includes("inspektur"));
+          }
+          if (item.key === "kasubagTu") {
+            return !isPim && (j.includes("kasubag") || j.includes("kasubbag") || j.includes("subbagian tata usaha") || (n.includes("reza") && j.includes("subbagian")));
+          }
+          if (item.key === "rumahTangga") {
+            return !isPim && (j.includes("rumah tangga") || u.includes("rumah tangga") || j.includes("rt ") || u.includes("sarana") || j.includes("pengadministrasi perkantoran") || n.includes("sumarno") || n.includes("henrico"));
+          }
+          if (item.key === "protokol") {
+            return !isPim && (j.includes("protokol") || u.includes("protokol") || u.includes("keprotokolan"));
+          }
+          if (item.key === "perangkat") {
+            return !isPim && (
+              j.includes("ajudan") || j.includes("walpri") || j.includes("pamwal") || j.includes("patwal") || j.includes("pengawal") || j.includes("serkapom") ||
+              u.includes("ajudan") || u.includes("walpri") || u.includes("pamwal") || u.includes("patwal") || u.includes("pengawal") || u.includes("serkapom") ||
+              j.includes("tenaga alih daya") || j.includes("non-asn") || j.includes("non pns")
+            );
+          }
+          if (item.key === "tuKepala") {
+            return !isPim;
+          }
+          return false;
+        });
+      }
+    }
+
+    const tripRecords = (rawList || []).map(normalizeTrip);
+
+    // Compute destination stats and surat tugas count
+    const tujuanMap = new Map();
+    const stSet = new Set();
+    for (const r of tripRecords) {
+      const t = (r.tujuan || "Lainnya").trim();
+      const curr = tujuanMap.get(t) || { tujuan: t, count: 0, total: 0 };
+      curr.count += 1;
+      curr.total += r.nilai_total_biaya;
+      tujuanMap.set(t, curr);
+      if (r.no_surat_tugas_spd && r.no_surat_tugas_spd.trim()) {
+        stSet.add(r.no_surat_tugas_spd.trim());
+      }
+    }
+    const computedTujuanStats = Array.from(tujuanMap.values()).sort((a, b) => b.count - a.count);
+
     setSelectedBudgetModal({
       key: item.key,
       title: item.label,
       desc: item.desc,
       pagu: paguValue || 0,
-      total: item.total || 0,
-      count: item.count || 0,
-      suratTugasCount: item.suratTugasCount || 0,
-      tujuanStats: item.tujuanStats || [],
-      records: item.records || [],
+      total: item.total || tripRecords.reduce((a, b) => a + b.nilai_total_biaya, 0),
+      count: tripRecords.length,
+      suratTugasCount: stSet.size || item.suratTugasCount || 0,
+      tujuanStats: item.tujuanStats?.length > 0 ? item.tujuanStats : computedTujuanStats,
+      records: tripRecords,
       colorTheme,
     });
     setBudgetModalSearch("");
@@ -491,9 +590,10 @@ export default function Home() {
         return false;
       }
       if (budgetModalStatusFilter !== "SEMUA") {
-        if (budgetModalStatusFilter === "Valid" && !r.status_validasi_ai.includes("Valid")) return false;
-        if (budgetModalStatusFilter === "Error" && !r.status_validasi_ai.includes("Error")) return false;
-        if (budgetModalStatusFilter === "Perlu" && !r.status_validasi_ai.includes("Perlu")) return false;
+        const val = String(r.status_validasi_ai || "");
+        if (budgetModalStatusFilter === "Valid" && !val.includes("Valid")) return false;
+        if (budgetModalStatusFilter === "Error" && !val.includes("Error")) return false;
+        if (budgetModalStatusFilter === "Perlu" && !val.includes("Perlu")) return false;
       }
       if (budgetModalSearch.trim()) {
         const q = budgetModalSearch.toLowerCase();
@@ -704,7 +804,14 @@ export default function Home() {
                               <div className="main-bar-stats" style={{ alignItems: "center" }}>
                                 <span>Pagu: <strong>{fmtShort(paguConfig.pimpinan.total)}</strong></span>
                                 <span>Terpakai: <strong>{fmtShort(stats.budgetMonitoring.pimpinan.total)}</strong></span>
-                                <button type="button" className="btn-budget-inspect">
+                                <button
+                                  type="button"
+                                  className="btn-budget-inspect"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenBudgetModal(stats.budgetMonitoring.pimpinan, paguConfig.pimpinan.total, "amber");
+                                  }}
+                                >
                                   🔍 Rincian ({stats.budgetMonitoring.pimpinan.suratTugasCount} ST)
                                 </button>
                               </div>
@@ -753,7 +860,14 @@ export default function Home() {
                                     <div className="budget-sub-name-group">
                                       <span className="budget-sub-name">{item.label}</span>
                                       <span className="budget-sub-count">{item.count} penugasan</span>
-                                      <button type="button" className="btn-budget-inspect">
+                                      <button
+                                        type="button"
+                                        className="btn-budget-inspect"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenBudgetModal(item, itemPagu, "amber");
+                                        }}
+                                      >
                                         🔍 Rincian ({item.suratTugasCount || item.count} ST)
                                       </button>
                                     </div>
@@ -818,7 +932,14 @@ export default function Home() {
                               <div className="main-bar-stats" style={{ alignItems: "center" }}>
                                 <span>Pagu: <strong>{fmtShort(paguConfig.tim.total)}</strong></span>
                                 <span>Terpakai: <strong>{fmtShort(stats.budgetMonitoring.tim.total)}</strong></span>
-                                <button type="button" className="btn-budget-inspect">
+                                <button
+                                  type="button"
+                                  className="btn-budget-inspect"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenBudgetModal(stats.budgetMonitoring.tim, paguConfig.tim.total, "cyan");
+                                  }}
+                                >
                                   🔍 Rincian ({stats.budgetMonitoring.tim.suratTugasCount} ST)
                                 </button>
                               </div>
@@ -867,7 +988,14 @@ export default function Home() {
                                     <div className="budget-sub-name-group">
                                       <span className="budget-sub-name">{item.label}</span>
                                       <span className="budget-sub-count">{item.count} penugasan</span>
-                                      <button type="button" className="btn-budget-inspect">
+                                      <button
+                                        type="button"
+                                        className="btn-budget-inspect"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenBudgetModal(item, itemPagu, "cyan");
+                                        }}
+                                      >
                                         🔍 Rincian ({item.suratTugasCount || item.count} ST)
                                       </button>
                                     </div>
@@ -2485,7 +2613,7 @@ export default function Home() {
       {/* Modal Pengaturan Pagu Anggaran (DIPA / POK) */}
       {showPaguModal && (
         <div className="pagu-modal-overlay" onClick={() => setShowPaguModal(false)}>
-          <div className="pagu-modal-content animate-in" onClick={(e) => e.stopPropagation()}>
+          <div className="pagu-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="pagu-modal-header">
               <h3>⚙️ Pengaturan Pagu Anggaran (DIPA / POK)</h3>
               <button
@@ -2718,7 +2846,7 @@ export default function Home() {
       {selectedBudgetModal && (
         <div className="modal-overlay" onClick={() => setSelectedBudgetModal(null)}>
           <div
-            className="modal-container animate-in"
+            className="modal-container"
             style={{ maxWidth: 1180, maxHeight: "92vh" }}
             onClick={(e) => e.stopPropagation()}
           >
