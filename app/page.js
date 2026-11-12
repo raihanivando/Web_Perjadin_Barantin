@@ -2702,7 +2702,7 @@ export default function Home() {
                 </div>
 
                 <div className="pagu-input-group">
-                  <label>Pagu Sestama (Rp)</label>
+                  <label>Pagu Sekretaris Utama (Rp)</label>
                   <div className="pagu-input-row">
                     <input
                       type="number"
