@@ -2184,7 +2184,7 @@ export default function Home() {
               <div className="section-title"><span className="icon">⚠️</span> Dokumen dengan Ketidaksesuaian</div>
               {errorRecords.length > 0 ? (
                 errorRecords.map((r) => (
-                  <ErrorAccordion key={r.id} record={r} />
+                  <ErrorAccordion key={r.id} record={r} onUpdate={fetchData} addToast={addToast} />
                 ))
               ) : (
                 <div className="chart-card animate-in" style={{ textAlign: "center", padding: 40 }}>
@@ -3189,11 +3189,14 @@ export default function Home() {
 }
 
 // ============================
-// ERROR ACCORDION COMPONENT
+// ERROR ACCORDION COMPONENT (IMPROVED — with inline editing)
 // ============================
-function ErrorAccordion({ record }) {
+function ErrorAccordion({ record, onUpdate, addToast }) {
   const [open, setOpen] = useState(false);
   const [validation, setValidation] = useState(null);
+  const [editData, setEditData] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [expandedDetail, setExpandedDetail] = useState(null);
 
   useEffect(() => {
     if (open && !validation) {
@@ -3203,9 +3206,90 @@ function ErrorAccordion({ record }) {
         body: JSON.stringify(record),
       })
         .then((r) => r.json())
-        .then(setValidation);
+        .then((v) => {
+          setValidation(v);
+          // Initialize edit data from record
+          setEditData({ ...record });
+        });
     }
   }, [open, validation, record]);
+
+  const updateEdit = (key, val) => setEditData((d) => ({ ...d, [key]: val }));
+
+  const applySuggestion = (fieldKey, suggestedValue) => {
+    setEditData((d) => ({ ...d, [fieldKey]: suggestedValue }));
+    if (addToast) addToast(`Saran diterapkan ke kolom ${fieldKey}`, "info");
+  };
+
+  const saveChanges = async () => {
+    if (!editData) return;
+    setSaving(true);
+    try {
+      // Recalculate total
+      const recalcTotal =
+        (Number(editData.uang_harian_diterima) || 0) +
+        (Number(editData.uang_representative_diterima) || 0) +
+        (Number(editData.nilai_hotel) || 0) +
+        (Number(editData.berangkat_nilai) || 0) +
+        (Number(editData.berangkat_taksi_nilai) || 0) +
+        (Number(editData.pulang_nilai) || 0) +
+        (Number(editData.pulang_taksi_nilai) || 0) +
+        (Number(editData.dpr_nilai_hotel) || 0) +
+        (Number(editData.dpr_nilai_transportasi) || 0) +
+        (Number(editData.dpr_nilai_taksi) || 0);
+
+      const payload = { ...editData, nilai_total_biaya: recalcTotal };
+
+      const res = await fetch(`/api/records/${record.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+      if (result.success) {
+        if (addToast) addToast(`Record #${record.id} berhasil diperbarui & di-validasi ulang!`, "success");
+        setValidation(result.validation);
+        setEditData(result.record || payload);
+        if (onUpdate) onUpdate();
+      } else {
+        if (addToast) addToast("Gagal menyimpan: " + (result.error || "Unknown error"), "error");
+      }
+    } catch (err) {
+      if (addToast) addToast("Gagal menyimpan: " + err.message, "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fieldLabels = {
+    tujuan: "Tujuan",
+    berangkat_maskapai: "Maskapai Berangkat",
+    pulang_maskapai: "Maskapai Pulang",
+    tgl_mulai: "Tanggal Mulai",
+    tgl_selesai: "Tanggal Selesai",
+    uang_harian_diterima: "Uang Harian Diterima (Rp)",
+    nilai_hotel: "Nilai Hotel (Rp)",
+    berangkat_nilai: "Tiket Berangkat (Rp)",
+    pulang_nilai: "Tiket Pulang (Rp)",
+    dpr_nilai_transportasi: "DPR Transport (Rp)",
+    nilai_total_biaya: "Total Biaya (Rp)",
+    sp2d_nominal: "SP2D Nominal (Rp)",
+    berangkat_taksi_nilai: "Taksi Berangkat (Rp)",
+    pulang_taksi_nilai: "Taksi Pulang (Rp)",
+    dpr_nilai_hotel: "DPR Hotel (Rp)",
+    dpr_nilai_taksi: "DPR Taksi (Rp)",
+    uang_representative_diterima: "Uang Representative (Rp)",
+  };
+
+  const numericFields = [
+    "uang_harian_diterima", "nilai_hotel", "berangkat_nilai", "pulang_nilai",
+    "dpr_nilai_transportasi", "nilai_total_biaya", "sp2d_nominal",
+    "berangkat_taksi_nilai", "pulang_taksi_nilai", "dpr_nilai_hotel", "dpr_nilai_taksi",
+    "uang_representative_diterima",
+  ];
+
+  const isDateField = (key) => key === "tgl_mulai" || key === "tgl_selesai";
+  const isNumericField = (key) => numericFields.includes(key);
 
   return (
     <div className={`accordion animate-in ${open ? "open" : ""}`}>
@@ -3220,32 +3304,223 @@ function ErrorAccordion({ record }) {
       {open && (
         <div className="accordion-body">
           {validation ? (
-            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 20 }}>
-              <div>
-                <strong style={{ color: "var(--text-title)" }}>Analisis AI Checker:</strong>
-                <div style={{ marginTop: 8 }}>
-                  {validation.details.map((d, i) => (
-                    <div key={i} style={{
-                      padding: "8px 12px", marginBottom: 6, borderRadius: 6,
-                      background: d.status === "error" ? "var(--error-bg)" : "var(--warning-bg)",
-                      border: `1px solid ${d.status === "error" ? "rgba(239,68,68,0.2)" : "rgba(245,158,11,0.2)"}`,
-                      fontSize: "0.82rem"
-                    }}>
-                      <strong>{d.field}:</strong> {d.message}
-                    </div>
-                  ))}
+            <div>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div>
+                  <strong style={{ color: "var(--text-title)", fontSize: "0.95rem" }}>🔍 Analisis AI Checker</strong>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
+                    {validation.total_error > 0 && <span style={{ color: "var(--error)", marginRight: 10 }}>❌ {validation.total_error} Error</span>}
+                    {validation.total_warning > 0 && <span style={{ color: "#f59e0b" }}>⚠️ {validation.total_warning} Perlu Diperiksa</span>}
+                    {validation.total_error === 0 && validation.total_warning === 0 && <span style={{ color: "var(--success)" }}>✅ Semua Sesuai</span>}
+                  </div>
                 </div>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={saveChanges}
+                  disabled={saving}
+                  style={{ padding: "6px 16px", fontSize: "0.82rem" }}
+                >
+                  {saving ? "⏳ Menyimpan..." : "💾 Simpan & Validasi Ulang"}
+                </button>
               </div>
-              <div>
-                <strong style={{ color: "var(--text-title)" }}>Rincian Komponen:</strong>
-                <div style={{ marginTop: 8, fontSize: "0.82rem", lineHeight: 2 }}>
-                  <div>Uang Harian: <strong>Rp {fmt(record.uang_harian_diterima)}</strong></div>
-                  <div>Hotel: <strong>Rp {fmt(record.nilai_hotel)}</strong></div>
-                  <div>Tiket Berangkat: <strong>Rp {fmt(record.berangkat_nilai)}</strong></div>
-                  <div>Tiket Pulang: <strong>Rp {fmt(record.pulang_nilai)}</strong></div>
-                  <div>DPR Transport: <strong>Rp {fmt(record.dpr_nilai_transportasi)}</strong></div>
-                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--border)", fontWeight: 700, color: "var(--accent)" }}>
-                    Total Tercatat: Rp {fmt(record.nilai_total_biaya)}
+
+              {/* Detail Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                {/* Left: AI Findings + Inline Edit */}
+                <div>
+                  {validation.details.length === 0 && (
+                    <div style={{ padding: 16, borderRadius: 8, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", fontSize: "0.85rem", color: "var(--success)" }}>
+                      ✅ Semua item terverifikasi valid. Tidak ada masalah yang ditemukan.
+                    </div>
+                  )}
+                  {validation.details.map((d, i) => {
+                    const isExpanded = expandedDetail === i;
+                    return (
+                      <div key={i} style={{
+                        marginBottom: 10, borderRadius: 8,
+                        background: d.status === "error" ? "rgba(239,68,68,0.06)" : "rgba(245,158,11,0.06)",
+                        border: `1px solid ${d.status === "error" ? "rgba(239,68,68,0.2)" : "rgba(245,158,11,0.2)"}`,
+                        overflow: "hidden",
+                      }}>
+                        {/* Issue Header */}
+                        <div
+                          style={{ padding: "10px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+                          onClick={() => setExpandedDetail(isExpanded ? null : i)}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, fontSize: "0.84rem", color: "var(--text-title)", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}>
+                              <span>{d.status === "error" ? "❌" : "⚠️"}</span>
+                              <span>{d.field}</span>
+                            </div>
+                            <div style={{ fontSize: "0.8rem", color: "var(--text-primary)", lineHeight: 1.5 }}>
+                              {d.message}
+                            </div>
+                          </div>
+                          <span style={{ color: "var(--text-muted)", fontSize: "0.7rem", marginLeft: 8, flexShrink: 0, marginTop: 2 }}>{isExpanded ? "▲ Tutup" : "▼ Detail & Edit"}</span>
+                        </div>
+
+                        {/* Expanded: Explanation + Inline Edit */}
+                        {isExpanded && (
+                          <div style={{ padding: "0 14px 14px", borderTop: `1px solid ${d.status === "error" ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)"}` }}>
+                            {/* Explanation */}
+                            {d.explanation && (
+                              <div style={{ margin: "10px 0", padding: "10px 12px", borderRadius: 6, background: "var(--bg-input)", fontSize: "0.8rem", lineHeight: 1.7, color: "var(--text-primary)", whiteSpace: "pre-line" }}>
+                                <div style={{ fontWeight: 600, marginBottom: 4, fontSize: "0.78rem", color: "var(--text-muted)" }}>💡 Penjelasan & Langkah Perbaikan:</div>
+                                {d.explanation}
+                              </div>
+                            )}
+
+                            {/* Suggestion Button */}
+                            {d.suggestion && d.fieldKey && (
+                              <div style={{ marginBottom: 10 }}>
+                                <button
+                                  className="btn btn-sm"
+                                  style={{ padding: "4px 12px", fontSize: "0.78rem", background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}
+                                  onClick={() => applySuggestion(d.fieldKey, d.suggestion)}
+                                >
+                                  ✨ Terapkan Saran: &quot;{typeof d.suggestion === "number" ? `Rp ${Number(d.suggestion).toLocaleString("id-ID")}` : d.suggestion}&quot;
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Inline Edit Fields */}
+                            {d.fieldKey && editData && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                {d.fieldKey === "tgl_mulai" ? (
+                                  <div style={{ display: "flex", gap: 8 }}>
+                                    <div style={{ flex: 1 }}>
+                                      <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 2, display: "block" }}>Tanggal Mulai</label>
+                                      <input
+                                        className="form-input"
+                                        type="date"
+                                        value={editData.tgl_mulai || ""}
+                                        onChange={(e) => updateEdit("tgl_mulai", e.target.value)}
+                                        style={{ fontSize: "0.82rem", padding: "6px 10px" }}
+                                      />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                      <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 2, display: "block" }}>Tanggal Selesai</label>
+                                      <input
+                                        className="form-input"
+                                        type="date"
+                                        value={editData.tgl_selesai || ""}
+                                        onChange={(e) => updateEdit("tgl_selesai", e.target.value)}
+                                        style={{ fontSize: "0.82rem", padding: "6px 10px" }}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 2, display: "block" }}>
+                                      {fieldLabels[d.fieldKey] || d.field}
+                                    </label>
+                                    <input
+                                      className="form-input"
+                                      type={isNumericField(d.fieldKey) ? "number" : "text"}
+                                      value={editData[d.fieldKey] ?? ""}
+                                      onChange={(e) => updateEdit(d.fieldKey, isNumericField(d.fieldKey) ? Number(e.target.value) : e.target.value)}
+                                      style={{ fontSize: "0.82rem", padding: "6px 10px" }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Right: Rincian Komponen + Quick Edit */}
+                <div>
+                  <strong style={{ color: "var(--text-title)", fontSize: "0.9rem" }}>📊 Rincian Komponen Biaya</strong>
+                  <div style={{ marginTop: 10, fontSize: "0.82rem" }}>
+                    {editData && [
+                      ["Uang Harian", "uang_harian_diterima"],
+                      ["Uang Representative", "uang_representative_diterima"],
+                      ["Hotel", "nilai_hotel"],
+                      ["Tiket Berangkat", "berangkat_nilai"],
+                      ["Taksi Berangkat", "berangkat_taksi_nilai"],
+                      ["Tiket Pulang", "pulang_nilai"],
+                      ["Taksi Pulang", "pulang_taksi_nilai"],
+                      ["DPR Hotel", "dpr_nilai_hotel"],
+                      ["DPR Transport", "dpr_nilai_transportasi"],
+                      ["DPR Taksi", "dpr_nilai_taksi"],
+                    ].map(([label, key]) => {
+                      const val = Number(editData[key]) || 0;
+                      if (val === 0) return null;
+                      return (
+                        <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid var(--border)" }}>
+                          <span style={{ color: "var(--text-muted)" }}>{label}</span>
+                          <input
+                            className="form-input"
+                            type="number"
+                            value={editData[key] ?? 0}
+                            onChange={(e) => updateEdit(key, Number(e.target.value))}
+                            style={{ width: 130, textAlign: "right", fontSize: "0.82rem", padding: "3px 8px", fontWeight: 600 }}
+                          />
+                        </div>
+                      );
+                    }).filter(Boolean)}
+
+                    {/* Total */}
+                    {editData && (() => {
+                      const recalc =
+                        (Number(editData.uang_harian_diterima) || 0) +
+                        (Number(editData.uang_representative_diterima) || 0) +
+                        (Number(editData.nilai_hotel) || 0) +
+                        (Number(editData.berangkat_nilai) || 0) +
+                        (Number(editData.berangkat_taksi_nilai) || 0) +
+                        (Number(editData.pulang_nilai) || 0) +
+                        (Number(editData.pulang_taksi_nilai) || 0) +
+                        (Number(editData.dpr_nilai_hotel) || 0) +
+                        (Number(editData.dpr_nilai_transportasi) || 0) +
+                        (Number(editData.dpr_nilai_taksi) || 0);
+                      return (
+                        <div style={{ marginTop: 10, paddingTop: 10, borderTop: "2px solid var(--border)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: "var(--accent)", fontSize: "0.88rem" }}>
+                            <span>Total Kalkulasi</span>
+                            <span>Rp {fmt(recalc)}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", fontSize: "0.78rem", marginTop: 4 }}>
+                            <span>Total Tercatat</span>
+                            <span>Rp {fmt(record.nilai_total_biaya)}</span>
+                          </div>
+                          {Math.abs(recalc - (Number(record.nilai_total_biaya) || 0)) > 1000 && (
+                            <div style={{ marginTop: 6, fontSize: "0.76rem", color: "var(--error)", fontWeight: 500 }}>
+                              ⚠️ Selisih: Rp {fmt(Math.abs(recalc - (Number(record.nilai_total_biaya) || 0)))} — akan otomatis dikoreksi saat simpan
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Additional Editable Fields */}
+                  <div style={{ marginTop: 16 }}>
+                    <strong style={{ color: "var(--text-title)", fontSize: "0.85rem" }}>✏️ Edit Data Lainnya</strong>
+                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {editData && [
+                        ["Tujuan", "tujuan", "text"],
+                        ["Maskapai Berangkat", "berangkat_maskapai", "text"],
+                        ["Maskapai Pulang", "pulang_maskapai", "text"],
+                        ["Tanggal Mulai", "tgl_mulai", "date"],
+                        ["Tanggal Selesai", "tgl_selesai", "date"],
+                      ].map(([label, key, type]) => (
+                        <div key={key}>
+                          <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 2, display: "block" }}>{label}</label>
+                          <input
+                            className="form-input"
+                            type={type}
+                            value={editData[key] ?? ""}
+                            onChange={(e) => updateEdit(key, e.target.value)}
+                            style={{ fontSize: "0.82rem", padding: "5px 10px" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3253,7 +3528,7 @@ function ErrorAccordion({ record }) {
           ) : (
             <div className="loading-container" style={{ padding: 20 }}>
               <div className="loading-spinner" />
-              <div className="loading-text">Memvalidasi...</div>
+              <div className="loading-text">Memvalidasi data...</div>
             </div>
           )}
         </div>
