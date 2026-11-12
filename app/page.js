@@ -170,7 +170,7 @@ export default function Home() {
             return isPim && (n.includes("sahat") || n.includes("karding") || (j.includes("kepala badan") && !n.includes("amrie")));
           }
           if (item.key === "sestama") {
-            return isPim && (n.includes("riswan") || j.includes("sekretaris") || j.includes("sestama") || j.includes("inspektur"));
+            return isPim && (n.includes("riswan") || j.includes("sekretaris") || j.includes("sestama") || j.includes("inspektur") || n.includes("shahandra") || n.includes("hanitiyo") || n.includes("shahandra") || n.includes("hanitiyo"));
           }
           if (item.key === "kasubagTu") {
             return isPim && (n.includes("amrie") || j.includes("tata usaha kepala") || (j.includes("kasubag") && !j.includes("rt") && !j.includes("protokol")));
