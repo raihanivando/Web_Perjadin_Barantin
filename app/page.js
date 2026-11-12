@@ -770,7 +770,7 @@ export default function Home() {
                       <div className="budget-section-header">
                         <div className="budget-section-header-left">
                           <h3>📊 Monitoring Pagu & Penyerapan Anggaran</h3>
-                          <p>Visualisasi daya serap anggaran berbasis POK/DIPA dengan indikator arsiran realisasi per pimpinan dan tim</p>
+                          <p>Monitoring daya serap anggaran berdasarkan alokasi POK/DIPA per unit pimpinan dan tim</p>
                         </div>
                         <div className="budget-section-header-right">
                           <button
@@ -814,23 +814,35 @@ export default function Home() {
                             onClick={() => handleOpenBudgetModal(stats.budgetMonitoring.pimpinan, paguConfig.pimpinan.total, "amber")}
                             title="Klik untuk melihat seluruh riwayat perjalanan dinas dan Surat Tugas Pimpinan"
                           >
-                            <div className="budget-main-bar-top">
-                              <span className="main-bar-label">
-                                <span>📐</span> Bar Anggaran Pimpinan
-                              </span>
-                              <div className="main-bar-stats" style={{ alignItems: "center" }}>
-                                <span>Pagu: <strong>{fmtShort(paguConfig.pimpinan.total)}</strong></span>
-                                <span>Terpakai: <strong>{fmtShort(stats.budgetMonitoring.pimpinan.total)}</strong></span>
-                                <button
-                                  type="button"
-                                  className="btn-budget-inspect"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenBudgetModal(stats.budgetMonitoring.pimpinan, paguConfig.pimpinan.total, "amber");
-                                  }}
-                                >
-                                  🔍 Rincian ({stats.budgetMonitoring.pimpinan.suratTugasCount} ST)
-                                </button>
+                            <div className="budget-main-header">
+                              <div className="budget-main-title-group">
+                                <span className="budget-main-title">Realisasi Total Pimpinan</span>
+                                <span className="budget-inspect-hint">Klik untuk rincian ↗</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn-budget-inspect"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenBudgetModal(stats.budgetMonitoring.pimpinan, paguConfig.pimpinan.total, "amber");
+                                }}
+                              >
+                                🔍 Rincian ({stats.budgetMonitoring.pimpinan.suratTugasCount} ST)
+                              </button>
+                            </div>
+
+                            <div className="budget-main-metrics-row">
+                              <div className="budget-metric-col">
+                                <span className="budget-metric-label">Pagu Alokasi</span>
+                                <span className="budget-metric-val">{fmtShort(paguConfig.pimpinan.total)}</span>
+                              </div>
+                              <div className="budget-metric-col">
+                                <span className="budget-metric-label">Realisasi Terpakai</span>
+                                <span className="budget-metric-val highlight amber">{fmtShort(stats.budgetMonitoring.pimpinan.total)}</span>
+                              </div>
+                              <div className="budget-metric-col">
+                                <span className="budget-metric-label">Sisa Anggaran</span>
+                                <span className="budget-metric-val sisa">{fmtShort(Math.max(0, paguConfig.pimpinan.total - stats.budgetMonitoring.pimpinan.total))}</span>
                               </div>
                             </div>
 
@@ -839,24 +851,11 @@ export default function Home() {
                               title={`Terpakai: Rp ${fmt(stats.budgetMonitoring.pimpinan.total)} dari Pagu Rp ${fmt(paguConfig.pimpinan.total)}`}
                             >
                               <div
-                                className="budget-bar-hatched budget-bar-hatched-amber"
+                                className="budget-bar-fill amber"
                                 style={{
                                   width: `${Math.min(100, Math.max(0, paguConfig.pimpinan.total > 0 ? (stats.budgetMonitoring.pimpinan.total / paguConfig.pimpinan.total) * 100 : 0))}%`,
                                 }}
-                              >
-                                <span className="budget-bar-text">
-                                  {fmtShort(stats.budgetMonitoring.pimpinan.total)} (
-                                  {paguConfig.pimpinan.total > 0
-                                    ? ((stats.budgetMonitoring.pimpinan.total / paguConfig.pimpinan.total) * 100).toFixed(1)
-                                    : 0}
-                                  %)
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="budget-main-bar-bottom">
-                              <span>Sisa Pagu: <b>{fmtShort(Math.max(0, paguConfig.pimpinan.total - stats.budgetMonitoring.pimpinan.total))}</b></span>
-                              <span>Realisasi: <b>Rp {fmt(stats.budgetMonitoring.pimpinan.total)}</b></span>
+                              />
                             </div>
                           </div>
 
@@ -873,10 +872,19 @@ export default function Home() {
                                   onClick={() => handleOpenBudgetModal(item, itemPagu, "amber")}
                                   title={`Klik untuk melihat rincian perjalanan dinas ${item.label}`}
                                 >
-                                  <div className="budget-sub-info">
-                                    <div className="budget-sub-name-group">
-                                      <span className="budget-sub-name">{item.label}</span>
-                                      <span className="budget-sub-count">{item.count} penugasan</span>
+                                  <div className="budget-sub-top">
+                                    <div className="budget-sub-identity">
+                                      <div className="budget-sub-name-wrap">
+                                        <span className="budget-sub-name">{item.label}</span>
+                                        <span className="budget-sub-count">{item.count} penugasan</span>
+                                      </div>
+                                      <span className="budget-sub-desc">{item.desc}</span>
+                                    </div>
+                                    <div className="budget-sub-stats-right">
+                                      <div className="budget-sub-amounts">
+                                        <span className="budget-sub-used">{fmtShort(item.total)}</span>
+                                        <span className="budget-sub-pagu">/ {fmtShort(itemPagu)}</span>
+                                      </div>
                                       <button
                                         type="button"
                                         className="btn-budget-inspect"
@@ -888,10 +896,6 @@ export default function Home() {
                                         🔍 Rincian ({item.suratTugasCount || item.count} ST)
                                       </button>
                                     </div>
-                                    <div className="budget-sub-values">
-                                      <span className="budget-sub-used">{fmtShort(item.total)}</span>
-                                      <span className="budget-sub-pagu">/ {fmtShort(itemPagu)}</span>
-                                    </div>
                                   </div>
 
                                   <div
@@ -899,15 +903,17 @@ export default function Home() {
                                     title={`${item.label}: Terpakai Rp ${fmt(item.total)} dari Pagu Rp ${fmt(itemPagu)} (${pct.toFixed(1)}%)`}
                                   >
                                     <div
-                                      className="budget-bar-hatched budget-bar-hatched-amber"
+                                      className="budget-bar-fill amber"
                                       style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
                                     />
                                   </div>
 
                                   <div className="budget-sub-meta">
-                                    <span>{item.desc}</span>
                                     <span className="percent-indicator amber">
-                                      {pct.toFixed(1)}% (Sisa {fmtShort(sisa)})
+                                      {pct.toFixed(1)}% terserap
+                                    </span>
+                                    <span className="budget-sub-sisa">
+                                      Sisa: <b>{fmtShort(sisa)}</b>
                                     </span>
                                   </div>
                                 </div>
@@ -942,23 +948,35 @@ export default function Home() {
                             onClick={() => handleOpenBudgetModal(stats.budgetMonitoring.tim, paguConfig.tim.total, "cyan")}
                             title="Klik untuk melihat seluruh riwayat perjalanan dinas dan Surat Tugas Tim"
                           >
-                            <div className="budget-main-bar-top">
-                              <span className="main-bar-label">
-                                <span>📐</span> Bar Anggaran Tim
-                              </span>
-                              <div className="main-bar-stats" style={{ alignItems: "center" }}>
-                                <span>Pagu: <strong>{fmtShort(paguConfig.tim.total)}</strong></span>
-                                <span>Terpakai: <strong>{fmtShort(stats.budgetMonitoring.tim.total)}</strong></span>
-                                <button
-                                  type="button"
-                                  className="btn-budget-inspect"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenBudgetModal(stats.budgetMonitoring.tim, paguConfig.tim.total, "cyan");
-                                  }}
-                                >
-                                  🔍 Rincian ({stats.budgetMonitoring.tim.suratTugasCount} ST)
-                                </button>
+                            <div className="budget-main-header">
+                              <div className="budget-main-title-group">
+                                <span className="budget-main-title">Realisasi Total Tim</span>
+                                <span className="budget-inspect-hint">Klik untuk rincian ↗</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn-budget-inspect"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenBudgetModal(stats.budgetMonitoring.tim, paguConfig.tim.total, "cyan");
+                                }}
+                              >
+                                🔍 Rincian ({stats.budgetMonitoring.tim.suratTugasCount} ST)
+                              </button>
+                            </div>
+
+                            <div className="budget-main-metrics-row">
+                              <div className="budget-metric-col">
+                                <span className="budget-metric-label">Pagu Alokasi</span>
+                                <span className="budget-metric-val">{fmtShort(paguConfig.tim.total)}</span>
+                              </div>
+                              <div className="budget-metric-col">
+                                <span className="budget-metric-label">Realisasi Terpakai</span>
+                                <span className="budget-metric-val highlight cyan">{fmtShort(stats.budgetMonitoring.tim.total)}</span>
+                              </div>
+                              <div className="budget-metric-col">
+                                <span className="budget-metric-label">Sisa Anggaran</span>
+                                <span className="budget-metric-val sisa">{fmtShort(Math.max(0, paguConfig.tim.total - stats.budgetMonitoring.tim.total))}</span>
                               </div>
                             </div>
 
@@ -967,24 +985,11 @@ export default function Home() {
                               title={`Terpakai: Rp ${fmt(stats.budgetMonitoring.tim.total)} dari Pagu Rp ${fmt(paguConfig.tim.total)}`}
                             >
                               <div
-                                className="budget-bar-hatched budget-bar-hatched-cyan"
+                                className="budget-bar-fill cyan"
                                 style={{
                                   width: `${Math.min(100, Math.max(0, paguConfig.tim.total > 0 ? (stats.budgetMonitoring.tim.total / paguConfig.tim.total) * 100 : 0))}%`,
                                 }}
-                              >
-                                <span className="budget-bar-text">
-                                  {fmtShort(stats.budgetMonitoring.tim.total)} (
-                                  {paguConfig.tim.total > 0
-                                    ? ((stats.budgetMonitoring.tim.total / paguConfig.tim.total) * 100).toFixed(1)
-                                    : 0}
-                                  %)
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="budget-main-bar-bottom">
-                              <span>Sisa Pagu: <b>{fmtShort(Math.max(0, paguConfig.tim.total - stats.budgetMonitoring.tim.total))}</b></span>
-                              <span>Realisasi: <b>Rp {fmt(stats.budgetMonitoring.tim.total)}</b></span>
+                              />
                             </div>
                           </div>
 
@@ -1001,10 +1006,19 @@ export default function Home() {
                                   onClick={() => handleOpenBudgetModal(item, itemPagu, "cyan")}
                                   title={`Klik untuk melihat rincian perjalanan dinas ${item.label}`}
                                 >
-                                  <div className="budget-sub-info">
-                                    <div className="budget-sub-name-group">
-                                      <span className="budget-sub-name">{item.label}</span>
-                                      <span className="budget-sub-count">{item.count} penugasan</span>
+                                  <div className="budget-sub-top">
+                                    <div className="budget-sub-identity">
+                                      <div className="budget-sub-name-wrap">
+                                        <span className="budget-sub-name">{item.label}</span>
+                                        <span className="budget-sub-count">{item.count} penugasan</span>
+                                      </div>
+                                      <span className="budget-sub-desc">{item.desc}</span>
+                                    </div>
+                                    <div className="budget-sub-stats-right">
+                                      <div className="budget-sub-amounts">
+                                        <span className="budget-sub-used">{fmtShort(item.total)}</span>
+                                        <span className="budget-sub-pagu">/ {fmtShort(itemPagu)}</span>
+                                      </div>
                                       <button
                                         type="button"
                                         className="btn-budget-inspect"
@@ -1016,10 +1030,6 @@ export default function Home() {
                                         🔍 Rincian ({item.suratTugasCount || item.count} ST)
                                       </button>
                                     </div>
-                                    <div className="budget-sub-values">
-                                      <span className="budget-sub-used">{fmtShort(item.total)}</span>
-                                      <span className="budget-sub-pagu">/ {fmtShort(itemPagu)}</span>
-                                    </div>
                                   </div>
 
                                   <div
@@ -1027,15 +1037,17 @@ export default function Home() {
                                     title={`${item.label}: Terpakai Rp ${fmt(item.total)} dari Pagu Rp ${fmt(itemPagu)} (${pct.toFixed(1)}%)`}
                                   >
                                     <div
-                                      className="budget-bar-hatched budget-bar-hatched-cyan"
+                                      className="budget-bar-fill cyan"
                                       style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
                                     />
                                   </div>
 
                                   <div className="budget-sub-meta">
-                                    <span>{item.desc}</span>
                                     <span className="percent-indicator cyan">
-                                      {pct.toFixed(1)}% (Sisa {fmtShort(sisa)})
+                                      {pct.toFixed(1)}% terserap
+                                    </span>
+                                    <span className="budget-sub-sisa">
+                                      Sisa: <b>{fmtShort(sisa)}</b>
                                     </span>
                                   </div>
                                 </div>
