@@ -214,8 +214,9 @@ export default function Home() {
       curr.count += 1;
       curr.total += r.nilai_total_biaya;
       tujuanMap.set(t, curr);
-      if (r.no_surat_tugas_spd && r.no_surat_tugas_spd.trim()) {
-        stSet.add(r.no_surat_tugas_spd.trim());
+      const st = (r.no_surat_tugas_spd || "").trim();
+      if (st && st !== "-" && st !== "–") {
+        stSet.add(st);
       }
     }
     const computedTujuanStats = Array.from(tujuanMap.values()).sort((a, b) => b.count - a.count);
@@ -227,7 +228,7 @@ export default function Home() {
       pagu: paguValue || 0,
       total: item.total || tripRecords.reduce((a, b) => a + b.nilai_total_biaya, 0),
       count: tripRecords.length,
-      suratTugasCount: stSet.size || item.suratTugasCount || 0,
+      suratTugasCount: stSet.size,
       tujuanStats: item.tujuanStats?.length > 0 ? item.tujuanStats : computedTujuanStats,
       records: tripRecords,
       colorTheme,
@@ -1409,7 +1410,7 @@ export default function Home() {
                                         #{tIdx + 1}. 📍 {trip.tujuan}
                                       </div>
                                       <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                                        {trip.tgl_mulai ? `${trip.tgl_mulai} • ` : ""}{trip.no_surat_tugas_spd}
+                                        {trip.no_surat_tugas_spd && trip.no_surat_tugas_spd !== "-" ? `${trip.tgl_mulai ? `${trip.tgl_mulai} • ` : ""}${trip.no_surat_tugas_spd}` : (trip.tgl_mulai || "-")}
                                       </div>
                                     </div>
                                     <div style={{ textAlign: "right" }}>
@@ -3064,12 +3065,18 @@ export default function Home() {
                         <tr key={r.id || idx}>
                           <td style={{ textAlign: "center", color: "var(--text-muted)" }}>{r.no_urut || idx + 1}</td>
                           <td>
-                            <div style={{ fontWeight: 600, color: "var(--text-title)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={r.no_surat_tugas_spd}>
-                              {r.no_surat_tugas_spd || "Tanpa No ST"}
-                            </div>
-                            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: 2 }}>
-                              📅 {r.tgl_mulai} {r.tgl_selesai && r.tgl_selesai !== r.tgl_mulai ? `s/d ${r.tgl_selesai}` : ""}
-                            </div>
+                            {r.no_surat_tugas_spd && r.no_surat_tugas_spd.trim() && r.no_surat_tugas_spd.trim() !== "-" && r.no_surat_tugas_spd.trim() !== "–" ? (
+                              <div style={{ fontWeight: 600, color: "var(--text-title)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={r.no_surat_tugas_spd}>
+                                {r.no_surat_tugas_spd}
+                              </div>
+                            ) : (
+                              <div style={{ color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: 500 }}>-</div>
+                            )}
+                            {(r.tgl_mulai || r.tgl_selesai) && (
+                              <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: 2 }}>
+                                📅 {r.tgl_mulai} {r.tgl_selesai && r.tgl_selesai !== r.tgl_mulai ? `s/d ${r.tgl_selesai}` : ""}
+                              </div>
+                            )}
                           </td>
                           <td>
                             <div style={{ fontWeight: 600 }}>{r.nama_pelaksana}</div>
@@ -3119,7 +3126,9 @@ export default function Home() {
                                 className="btn btn-secondary btn-sm"
                                 style={{ padding: "2px 6px", fontSize: "0.68rem" }}
                                 onClick={() => {
-                                  const groupKey = (r.no_surat_tugas_spd || "").trim() || (r.no_urut != null ? `NO_URUT_${r.no_urut}` : `ID_${r.id}`);
+                                  const stVal = (r.no_surat_tugas_spd || "").trim();
+                                  const hasSt = stVal && stVal !== "-" && stVal !== "–";
+                                  const groupKey = hasSt ? stVal : (r.no_urut != null ? `NO_URUT_${r.no_urut}` : `ID_${r.id}`);
                                   setDetailModalKey(groupKey);
                                 }}
                                 title="Lihat detail seluruh rombongan Surat Tugas ini"
