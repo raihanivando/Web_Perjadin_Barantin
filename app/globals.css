@@ -380,6 +380,11 @@ html, body {
   line-height: 1.1;
 }
 
+.metric-value.currency {
+  font-size: clamp(1.15rem, 1.4vw, 1.55rem);
+  white-space: nowrap;
+}
+
 .metric-sub {
   font-size: 0.78rem;
   color: var(--text-dim);

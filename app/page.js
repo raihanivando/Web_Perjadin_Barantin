@@ -11,13 +11,14 @@ import {
 // ============================
 const fmt = (val) => {
   const n = Number(val) || 0;
-  return n.toLocaleString("id-ID");
+  return n.toLocaleString("id-ID", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
 };
 
 const fmtShort = (val) => {
   const n = Number(val) || 0;
-  if (n >= 1e9) return `Rp ${(n / 1e9).toFixed(1)} M`;
-  if (n >= 1e6) return `Rp ${(n / 1e6).toFixed(1)} Jt`;
   return `Rp ${fmt(n)}`;
 };
 
